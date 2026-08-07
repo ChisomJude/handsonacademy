@@ -1,0 +1,2 @@
+# Design system
+The visual language is a restrained engineering product UI: deep slate ink, paper background, mint support color, and coral action color. Manrope provides readable hierarchy; DM Mono identifies technical labels and statuses. Cards use subtle borders, modest radii, and light shadows. Core reusable components are Navigation, Footer, TrackCard, WaitlistButton, ApplicationForm, Bullets, and CTA.

@@ -1,0 +1,1 @@
+import type {MetadataRoute} from "next";const paths=['','/about','/tracks','/tracks/devops-beginner','/tracks/cloud-native-beginner','/community','/apply','/login','/privacy','/terms'];export default function sitemap():MetadataRoute.Sitemap{return paths.map(path=>({url:`https://handsonacademy.com${path}`,lastModified:new Date()}))}

@@ -1,0 +1,2 @@
+# Content model
+MDX content belongs under `content/<domain>/<track-slug>/`. Track frontmatter includes title, description, objective, prerequisites, estimate, and difficulty. Milestone and mission files contain instructions, commands, expected output, hints, common errors, resources, tasks, challenges, and completion requirements. Rendering must remain decoupled from content storage so a CMS can be introduced later.

@@ -1,0 +1,2 @@
+# Future database model
+PostgreSQL entities: `users` 1:1 `profiles`; `tracks` 1:N `milestones`; `milestones` 1:N `missions`; `missions` 1:N `tasks` and `challenges`. `progress` joins users to content nodes. `submissions` belong to users and tasks/missions. `waitlists`, `community_applications`, `subscriptions`, `payments`, `announcements`, and `notifications` each reference users where applicable. Use UUID primary keys, timestamps, soft deletion for user content, and foreign-key indexes.
