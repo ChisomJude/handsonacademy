@@ -1,0 +1,1 @@
+import {PortalHeader} from '@/components/portal/portal-header';export default function AdminLayout({children}:{children:React.ReactNode}){return <><PortalHeader admin/><main style={{minHeight:'calc(100vh - 72px)',background:'#f4f8f6'}}>{children}</main></>}
