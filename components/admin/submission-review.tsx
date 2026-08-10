@@ -1,0 +1,8 @@
+'use client';
+import {useState} from 'react';
+import {Check, LoaderCircle, MessageSquare} from 'lucide-react';
+export function SubmissionReview({id, initialStatus}:{id:string;initialStatus:string}) {
+  const [status,setStatus]=useState(initialStatus); const [notes,setNotes]=useState(''); const [saving,setSaving]=useState(false); const [error,setError]=useState('');
+  async function review(next:'approved'|'needs_changes'){setSaving(true);setError('');const res=await fetch('/api/admin/submissions',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,status:next,reviewer_notes:notes})});const body=await res.json().catch(()=>({}));if(!res.ok)setError(body.error||'Could not save review.');else setStatus(next);setSaving(false)}
+  return <div style={{marginTop:16,borderTop:'1px solid var(--line)',paddingTop:14}}><div style={{display:'flex',gap:8,flexWrap:'wrap'}}><button className="btn btn-primary" disabled={saving} onClick={()=>review('approved')}>{saving?<LoaderCircle className="spin" size={15}/>:<Check size={15}/>} Approve</button><button className="btn btn-secondary" disabled={saving} onClick={()=>review('needs_changes')}><MessageSquare size={15}/> Request changes</button></div><input value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Optional reviewer note" style={{width:'100%',marginTop:10,padding:10,border:'1px solid var(--line)',borderRadius:7,font:'inherit'}}/><small style={{display:'block',marginTop:8,color:'var(--muted)'}}>Current status: {status}</small>{error&&<small style={{display:'block',color:'#b9462b',marginTop:6}}>{error}</small>}<style>{`.spin{animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}`}</style></div>
+}
