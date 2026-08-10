@@ -25,7 +25,11 @@ Set these for Production and Preview, then redeploy:
 NEXT_PUBLIC_SUPABASE_URL=https://<project>.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<publishable-or-anon-key>
 NEXT_PUBLIC_SITE_URL=https://handsonacademy.org.ng
+NEXT_PUBLIC_TURNSTILE_SITE_KEY=<Cloudflare Turnstile site key>
+TURNSTILE_SECRET_KEY=<Cloudflare Turnstile secret key>
 ```
+
+Turnstile keys are required before enabling bot protection on public forms. Create a Cloudflare Turnstile widget restricted to `handsonacademy.org.ng` and provide its site key and secret key in Vercel. Never expose the secret key in client code.
 
 ## Smoke test
 
