@@ -27,11 +27,18 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<publishable-or-anon-key>
 NEXT_PUBLIC_SITE_URL=https://handsonacademy.org.ng
 NEXT_PUBLIC_TURNSTILE_SITE_KEY=<Cloudflare Turnstile site key>
 TURNSTILE_SECRET_KEY=<Cloudflare Turnstile secret key>
+NEXT_PUBLIC_GOOGLE_CLIENT_ID=<Google OAuth web client ID>
 RESEND_API_KEY=<Resend API key>
 EMAIL_FROM=HandsOn Academy <noreply@handsonacademy.org.ng>
 EMAIL_REPLY_TO=hello@handsonacademy.org.ng
 ADMIN_NOTIFICATION_EMAIL=<inbox that should hear about every application>
+SEND_ADMIN_ALERTS=true
+SEND_APPLICATION_CONFIRMATION=false
 ```
+
+Two of these are quiet failure modes worth checking twice. `EMAIL_FROM` must be an address on the Resend-verified domain, or every send is rejected and you will only see it in the function logs. `NEXT_PUBLIC_SITE_URL` builds every link inside every email, so if it is wrong the approval email points somewhere useless.
+
+Email volume is controlled by the last two. `SEND_APPLICATION_CONFIRMATION` is off by default because it doubles spend per application and the approval email is the one that matters. `SEND_ADMIN_ALERTS=false` silences the per-application notice to `ADMIN_NOTIFICATION_EMAIL` without unsetting the address.
 
 Turnstile keys are required before enabling bot protection on public forms. Create a Cloudflare Turnstile widget restricted to `handsonacademy.org.ng` and provide its site key and secret key in Vercel. Never expose the secret key in client code. When `TURNSTILE_SECRET_KEY` is absent the bot check is skipped rather than failing closed, so `/api/inquiries` is an open insert until you set it.
 
@@ -46,7 +53,7 @@ Transactional email uses [Resend](https://resend.com), whose free tier covers 3,
 5. Set `ADMIN_NOTIFICATION_EMAIL` so new applications reach you without opening the admin inbox.
 6. Consider adding a DMARC record (`_dmarc.handsonacademy.org.ng`) once SPF and DKIM pass, to protect deliverability.
 
-Emails sent: application received and new-application alert on submit, approval with the portal sign-in link, and a decline notice. `community_inquiries.decision_email_sent_at` makes a repeated Approve click a no-op, and is only stamped after a successful send, so a failed send can be retried by clicking again. With `RESEND_API_KEY` unset, every send is skipped with a server log line instead of silently pretending to work.
+Emails sent: the new-application alert to the admin inbox on submit, approval with the portal sign-in link, and a decline notice. The applicant confirmation exists but is off by default. `community_inquiries.decision_email_sent_at` makes a repeated Approve click a no-op, and is only stamped after a successful send, so a failed send can be retried by clicking again. With `RESEND_API_KEY` unset, every send is skipped with a server log line instead of silently pretending to work.
 
 ## Google sign-in and consent screen branding
 
@@ -74,8 +81,8 @@ Only non-sensitive scopes (`openid`, `email`, `profile`) are requested, so no th
 
 ## Smoke test
 
-1. Submit an application at `/apply` with a real address. Confirm the applicant confirmation and the admin alert both arrive.
-2. Approve that application at `/admin/inquiries` with the admin account. Confirm the review panel reports "Applicant emailed" and the approval email arrives with a working `/login` link.
+1. Submit an application at `/apply` with a real address, both signed out and while signed in as a different account. Confirm the admin alert arrives and neither attempt errors. Submitting the same address twice should give a friendly "we already have an application" message, not a server error.
+2. Approve that application at `/admin/inquiries` with the admin account. Confirm the result line reports it was emailed and the approval email arrives with a working `/login` link.
 3. Follow that link and sign in with Google using the approved address. Confirm the consent screen names HandsOn Academy rather than the Supabase URL, and that you reach `/dashboard`.
    Also sign in with an address that has no approved application and confirm you are turned away with `?error=approval_required`.
 4. Choose either free track, open a mission, complete the checklist, and submit evidence.
@@ -83,3 +90,32 @@ Only non-sensitive scopes (`openid`, `email`, `profile`) are requested, so no th
 6. Confirm the dashboard mission count changes after completion.
 
 Payments are intentionally not included. Both tracks and all seeded missions are free.
+
+## Running the admin inbox
+
+`/admin/inquiries` splits into three tabs — Learners, Mentors & speakers, Sponsors — each with search and a status filter. Speakers currently share the `mentor` kind; separating them is a database constraint change, not a UI one.
+
+- **Approving a learner emails them.** That email carries the only sign-in link they will ever get, so approving without email configured leaves someone approved but uninformed. The result line says which happened.
+- **Bulk decisions** apply to the selected rows, with one optional note across all of them. They are processed sequentially, not in parallel, because a burst of parallel approvals is the fastest way to hit Resend's rate limit. Maximum 100 per request.
+- **Export CSV** and **Copy emails** act on your selection, or on everything currently filtered if nothing is selected — so filtering to approved learners and copying their addresses needs no selecting.
+- An **emailed** marker shows who has already been notified. Re-applying the same decision will not send a second copy; if a send failed, repeating the action retries it.
+
+Approving someone who was approved before the email flow existed will send them a "You are in" email for the first time. To suppress that for existing learners, mark them as already notified:
+
+```sql
+update public.community_inquiries
+set decision_email_sent_at = coalesce(status_updated_at, created_at)
+where kind = 'learner' and status = 'approved' and decision_email_sent_at is null;
+```
+
+## Editing course content
+
+**Not possible from the admin UI in v1.** `/admin/content` lists tracks and missions read-only. Learner-facing lesson bodies live in `lib/lesson-content.ts` and `lib/lesson-catalog.ts` and are pre-rendered at build time, so changing what a learner reads means editing TypeScript and redeploying. See [CONTENT_MODEL.md](./CONTENT_MODEL.md) for the shape of the v2 work.
+
+## Go-live checklist
+
+1. Run migrations `001` then `002` in the Supabase SQL Editor. **Migration 002 must be applied before deploying this version** — the admin decision path writes `status_updated_at`, and without that column every approval returns a 500.
+2. Confirm all Vercel variables above are set for Production, `EMAIL_FROM` is on the Resend-verified domain, and the domain shows verified in Resend with SPF and DKIM passing.
+3. Confirm the Google client lists both JavaScript origins, and that Supabase carries the client ID under Authentication → Providers → Google → Client IDs with **Skip nonce checks** off.
+4. Deploy, then work through the smoke test above.
+5. Only once sign-in is confirmed working in production, remove the Supabase callback URL from the Google client and re-submit branding for verification. This step retires the classic sign-in fallback and cannot be undone without re-adding the URL.

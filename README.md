@@ -1,7 +1,11 @@
-# Handson Academy
-Project-based technology learning platform: a public marketing site, a gated learning portal with tracks, missions and evidence submissions, and an admin review surface.
+# HandsOn Academy
+
+Project-based technology learning: a public marketing site, a gated learning portal with tracks, missions and evidence submissions, and an admin surface for admissions and review.
+
+**Status: v1, going live.** Content management is deferred to v2 — see [docs/ROADMAP.md](./docs/ROADMAP.md).
 
 ## Run locally
+
 Requires Node.js 24+.
 
 ```bash
@@ -9,27 +13,42 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:3000`. Copy `.env.example` to `.env.local` and fill in what you need. The app degrades honestly when a service is unconfigured: without Supabase keys the dashboard is a setup preview and never fakes authentication, and without a Resend key emails are logged instead of sent.
+Open `http://localhost:3000`. Copy `.env.example` to `.env.local` and fill in what you need. The app degrades honestly when a service is unconfigured: without Supabase keys the dashboard is a setup preview and never fakes authentication, and without a Resend key emails are logged rather than silently dropped.
 
 ## Quality checks
+
 `npm run typecheck`, `npm run lint`, and `npm run build`.
 
 ## Docker
+
 `docker compose up --build`, then open `http://localhost:3000`.
 
-## Configuration
-Copy `.env.example` to `.env.local`, and set the same variables in Vercel for Preview and Production. See [docs/PORTAL_RUNBOOK.md](./docs/PORTAL_RUNBOOK.md) for the full setup, including the Supabase migrations, granting yourself the admin role, and verifying the email sending domain.
+## Configuration and deployment
 
-Supabase needs Google enabled under Authentication → Providers, with the web client ID listed under **Client IDs**. Sign-in uses Google Identity Services on our own origin rather than a redirect through Supabase, so the Google consent screen shows our domain and branding instead of the Supabase project URL. The older redirect flow remains available behind a fallback button until the Supabase callback URL is removed from the Google client — see the runbook.
+Copy `.env.example` to `.env.local`, and set the same variables in Vercel for Preview and Production. [docs/PORTAL_RUNBOOK.md](./docs/PORTAL_RUNBOOK.md) is the operational source of truth: Supabase migrations, granting admin, Resend domain verification, Google consent-screen branding, the go-live checklist, and the smoke test.
+
+Two things bite quietly if wrong: `EMAIL_FROM` must be on the Resend-verified domain, and `NEXT_PUBLIC_SITE_URL` builds every link inside every email.
 
 ## Applicant journey
-1. A visitor applies at `/apply`. The row lands in `community_inquiries`, they receive a confirmation email, and the admin inbox is notified.
-2. An admin approves or rejects at `/admin/inquiries`.
-3. On approval the applicant is emailed a link to `/login`. Nothing else tells them they were accepted, so this email is load-bearing.
-4. `/auth/callback` admits Google sign-ins whose email has an approved learner application, and turns everyone else away with `?error=approval_required`.
+
+1. A visitor applies at `/apply`. One live application per email address; reapplying after a rejection is allowed.
+2. An admin approves or declines at `/admin/inquiries`, individually or in bulk.
+3. Approval emails the applicant a link to `/login`. **Nothing else tells them they were accepted**, so this email is load-bearing.
+4. Sign-in admits a Google account only if its email has an approved learner application. Admins bypass the check.
+
+## Authentication
+
+Google Identity Services runs on our own origin: the browser gets a signed ID token and hands it to Supabase, with no redirect through the Supabase project URL. That is what lets the Google consent screen carry our own domain and branding. The older redirect flow stays behind a fallback button until the Supabase callback URL is removed from the Google client.
 
 ## Architecture
-App Router pages are server-rendered; interactive components are deliberately small client islands. Tracks and missions live in Supabase (seeded by `supabase/migrations/001_learning_engine.sql`), with static fallbacks in `lib/tracks.ts`. See [docs](./docs) for product, architecture, database, design, roadmap, and content-model decisions.
 
-## Current limitations
-Payments are not implemented and both tracks are free. Public form protection depends on Cloudflare Turnstile: when `TURNSTILE_SECRET_KEY` is unset the bot check is skipped entirely, so set it in production. There is no automated test suite or CI yet.
+App Router pages are server-rendered; interactive pieces are small client islands. Row-level security is the real authorisation boundary — there is no service-role key in the application. See [docs](./docs) for product, architecture, database, design, roadmap, and content-model detail.
+
+## Known limitations
+
+- **Course content is not editable from the admin UI.** Lesson bodies are static TypeScript, pre-rendered at build time; changing them requires a deploy. This is the main v2 item.
+- **Turnstile fails open.** With `TURNSTILE_SECRET_KEY` unset the bot check is skipped entirely and `/api/inquiries` has no rate limiting of its own. Set it in production.
+- Announcements exist in the database with no editor and no learner-facing display.
+- Speakers share the `mentor` inquiry kind.
+- Payments are not implemented; every track and mission is free.
+- No automated test suite and no CI.

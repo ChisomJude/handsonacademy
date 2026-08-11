@@ -25,9 +25,13 @@ export async function POST(request: Request) {
 
   // Notifications are best-effort and deliberately awaited before the response so
   // serverless execution is not cut short. sendEmail never throws.
+  //
+  // The applicant confirmation is off by default: it doubles email spend per
+  // application, and the approval email is the one that actually matters. Set
+  // SEND_APPLICATION_CONFIRMATION=true to turn it back on.
   const notifications: Promise<unknown>[] = [];
-  if (inquiry.kind === 'learner') notifications.push(sendEmail(applicationReceivedEmail(inquiry)));
-  if (process.env.ADMIN_NOTIFICATION_EMAIL) notifications.push(sendEmail(newInquiryAlertEmail(process.env.ADMIN_NOTIFICATION_EMAIL, inquiry)));
+  if (inquiry.kind === 'learner' && process.env.SEND_APPLICATION_CONFIRMATION === 'true') notifications.push(sendEmail(applicationReceivedEmail(inquiry)));
+  if (process.env.ADMIN_NOTIFICATION_EMAIL && process.env.SEND_ADMIN_ALERTS !== 'false') notifications.push(sendEmail(newInquiryAlertEmail(process.env.ADMIN_NOTIFICATION_EMAIL, inquiry)));
   await Promise.all(notifications);
 
   return NextResponse.json({received: true}, {status: 201});

@@ -1,3 +1,22 @@
-import Link from 'next/link';import {redirect} from 'next/navigation';import {ArrowLeft} from 'lucide-react';import {createSupabaseServerClient} from '@/lib/supabase/server';import {InquiryReview} from '@/components/admin/inquiry-review';
-export const metadata={title:'Community inquiries'};
-export default async function Inquiries(){const supabase=await createSupabaseServerClient();const {data:{user}}=await supabase.auth.getUser();if(!user||user.app_metadata?.role!=='admin')redirect('/admin');const {data,error}=await supabase.from('community_inquiries').select('*').order('created_at',{ascending:false});return <section className="shell section"><Link href="/admin" style={{fontSize:13,color:'var(--muted)',display:'inline-flex',gap:7,alignItems:'center'}}><ArrowLeft size={15}/> Admin overview</Link><span className="eyebrow" style={{display:'block',marginTop:30}}>Follow-up inbox</span><h1>Community inquiries</h1><p className="lede">Approve learner applications before portal access, or follow up with sponsors and mentors.</p>{error?<p role="alert">{error.message}</p>:<div style={{display:'grid',gap:14,marginTop:30}}>{data?.length?data.map(item=><article className="card" style={{padding:22}} key={item.id}><div style={{display:'flex',justifyContent:'space-between',gap:12,flexWrap:'wrap'}}><div><span className="tag">{item.kind}</span><h2 style={{fontSize:21,margin:'12px 0 4px'}}>{item.full_name}</h2></div><span className="tag">{item.status}</span></div><p style={{margin:'6px 0',lineHeight:1.7}}><a href={`mailto:${item.email}`}>{item.email}</a> · <a href={`tel:${item.phone}`}>{item.phone}</a></p>{item.organization&&<p style={{margin:'6px 0',color:'var(--muted)'}}>Organisation/interest: {item.organization}</p>}{item.country&&<p style={{margin:'6px 0',color:'var(--muted)'}}>Country: {item.country}</p>}{item.focus&&<p style={{margin:'6px 0',color:'var(--muted)'}}>Focus: {item.focus}</p>}<p style={{whiteSpace:'pre-wrap',lineHeight:1.7}}>{item.message}</p><small style={{color:'var(--muted)'}}>{new Date(item.created_at).toLocaleString()}</small><InquiryReview id={item.id} kind={item.kind} initialStatus={item.status}/></article>):<div className="card" style={{padding:24}}>No inquiries yet.</div>}</div>}</section>}
+import Link from 'next/link';
+import {redirect} from 'next/navigation';
+import {ArrowLeft} from 'lucide-react';
+import {createSupabaseServerClient} from '@/lib/supabase/server';
+import {InquiryTable, type Inquiry} from '@/components/admin/inquiry-table';
+
+export const metadata = {title: 'Community inquiries'};
+
+export default async function Inquiries() {
+  const supabase = await createSupabaseServerClient();
+  const {data: {user}} = await supabase.auth.getUser();
+  if (!user || user.app_metadata?.role !== 'admin') redirect('/admin');
+  const {data, error} = await supabase.from('community_inquiries').select('*').order('created_at', {ascending: false});
+
+  return <section className="shell section">
+    <Link href="/admin" style={{fontSize: 13, color: 'var(--muted)', display: 'inline-flex', gap: 7, alignItems: 'center'}}><ArrowLeft size={15} /> Admin overview</Link>
+    <span className="eyebrow" style={{display: 'block', marginTop: 30}}>Follow-up inbox</span>
+    <h1>Community inquiries</h1>
+    <p className="lede">Approve learner applications before portal access, or follow up with sponsors, mentors and speakers. Select several rows to act on them together.</p>
+    {error ? <p role="alert" style={{color: '#b9462b'}}>{error.message}</p> : <InquiryTable initial={(data || []) as Inquiry[]} />}
+  </section>;
+}
