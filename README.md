@@ -1,5 +1,5 @@
 # Handson Academy
-Public Phase 0 + 1 foundation for a project-based technology learning platform.
+Project-based technology learning platform: a public marketing site, a gated learning portal with tracks, missions and evidence submissions, and an admin review surface.
 
 ## Run locally
 Requires Node.js 24+.
@@ -9,7 +9,7 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:3000`. Copy `.env.example` to `.env.local` when environment configuration is needed. Phase 1 has no required runtime variables.
+Open `http://localhost:3000`. Copy `.env.example` to `.env.local` and fill in what you need. The app degrades honestly when a service is unconfigured: without Supabase keys the dashboard is a setup preview and never fakes authentication, and without a Resend key emails are logged instead of sent.
 
 ## Quality checks
 `npm run typecheck`, `npm run lint`, and `npm run build`.
@@ -17,11 +17,19 @@ Open `http://localhost:3000`. Copy `.env.example` to `.env.local` when environme
 ## Docker
 `docker compose up --build`, then open `http://localhost:3000`.
 
-## Architecture
-App Router pages are server-rendered. Interactive components are deliberately small client islands. Track data is currently static in `lib/tracks.ts`, ready to be replaced by a PostgreSQL repository in Phase 2. See [docs](./docs) for product, architecture, database, design, roadmap, and content-model decisions.
+## Configuration
+Copy `.env.example` to `.env.local`, and set the same variables in Vercel for Preview and Production. See [docs/PORTAL_RUNBOOK.md](./docs/PORTAL_RUNBOOK.md) for the full setup, including the Supabase migrations, granting yourself the admin role, and verifying the email sending domain.
 
-## Phase 2/3 configuration
-Copy `.env.example` to `.env.local` and add the Supabase project URL and publishable key from Supabase Project Settings → API Keys. Add the same public variables to Vercel for Preview and Production. Google OAuth must be enabled in Supabase Authentication → Providers, with the callback URL set to `https://your-domain.com/auth/callback` (and the local equivalent for development). The dashboard is protected when these variables are present; without them it remains a safe setup preview and never fakes authentication.
+Supabase needs Google enabled under Authentication → Providers, with the web client ID listed under **Client IDs**. Sign-in uses Google Identity Services on our own origin rather than a redirect through Supabase, so the Google consent screen shows our domain and branding instead of the Supabase project URL. The older redirect flow remains available behind a fallback button until the Supabase callback URL is removed from the Google client — see the runbook.
+
+## Applicant journey
+1. A visitor applies at `/apply`. The row lands in `community_inquiries`, they receive a confirmation email, and the admin inbox is notified.
+2. An admin approves or rejects at `/admin/inquiries`.
+3. On approval the applicant is emailed a link to `/login`. Nothing else tells them they were accepted, so this email is load-bearing.
+4. `/auth/callback` admits Google sign-ins whose email has an approved learner application, and turns everyone else away with `?error=approval_required`.
+
+## Architecture
+App Router pages are server-rendered; interactive components are deliberately small client islands. Tracks and missions live in Supabase (seeded by `supabase/migrations/001_learning_engine.sql`), with static fallbacks in `lib/tracks.ts`. See [docs](./docs) for product, architecture, database, design, roadmap, and content-model decisions.
 
 ## Current limitations
-Waitlist, application, sponsor, and mentor forms validate in the browser but do not persist data. Track progress is currently a prepared dashboard surface with static launch-track content; persistence, missions, submissions, and evidence arrive with the Learning Engine.
+Payments are not implemented and both tracks are free. Public form protection depends on Cloudflare Turnstile: when `TURNSTILE_SECRET_KEY` is unset the bot check is skipped entirely, so set it in production. There is no automated test suite or CI yet.

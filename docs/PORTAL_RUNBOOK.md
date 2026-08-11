@@ -6,7 +6,7 @@ The frontend and API route handlers run together on Vercel. The learner browser 
 
 ## One-time Supabase setup
 
-1. Run `supabase/migrations/001_learning_engine.sql` in the Supabase SQL Editor. It is safe to rerun and recreates policies without deleting tables or course data.
+1. Run `supabase/migrations/001_learning_engine.sql`, then `supabase/migrations/002_application_emails.sql`, in the Supabase SQL Editor. Both are safe to rerun and neither deletes tables or course data. Migration 002 auto-closes duplicate live applications for the same email address before adding a unique index that prevents new ones; review `/admin/inquiries` afterwards if you expect duplicates.
 2. Set your own account as admin (replace the email):
 
 ```sql
@@ -27,15 +27,59 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<publishable-or-anon-key>
 NEXT_PUBLIC_SITE_URL=https://handsonacademy.org.ng
 NEXT_PUBLIC_TURNSTILE_SITE_KEY=<Cloudflare Turnstile site key>
 TURNSTILE_SECRET_KEY=<Cloudflare Turnstile secret key>
+RESEND_API_KEY=<Resend API key>
+EMAIL_FROM=HandsOn Academy <noreply@handsonacademy.org.ng>
+EMAIL_REPLY_TO=hello@handsonacademy.org.ng
+ADMIN_NOTIFICATION_EMAIL=<inbox that should hear about every application>
 ```
 
-Turnstile keys are required before enabling bot protection on public forms. Create a Cloudflare Turnstile widget restricted to `handsonacademy.org.ng` and provide its site key and secret key in Vercel. Never expose the secret key in client code.
+Turnstile keys are required before enabling bot protection on public forms. Create a Cloudflare Turnstile widget restricted to `handsonacademy.org.ng` and provide its site key and secret key in Vercel. Never expose the secret key in client code. When `TURNSTILE_SECRET_KEY` is absent the bot check is skipped rather than failing closed, so `/api/inquiries` is an open insert until you set it.
+
+## Email setup (Resend)
+
+Transactional email uses [Resend](https://resend.com), whose free tier covers 3,000 emails per month and 100 per day. That is comfortably above an early cohort; if a launch pushes past 100 emails in a day, Brevo's free tier allows 300 per day and only `lib/email/send.ts` would need to change.
+
+1. Create a Resend account and add `handsonacademy.org.ng` under Domains.
+2. Add the SPF and DKIM DNS records Resend generates to your domain's DNS, and wait for the domain to show as verified. Mail sent from an unverified domain will be rejected or land in spam.
+3. Create an API key with send permission and set `RESEND_API_KEY` in Vercel.
+4. Set `EMAIL_FROM` to an address on the verified domain. `EMAIL_REPLY_TO` should be an inbox a human reads, since applicants will reply to these emails.
+5. Set `ADMIN_NOTIFICATION_EMAIL` so new applications reach you without opening the admin inbox.
+6. Consider adding a DMARC record (`_dmarc.handsonacademy.org.ng`) once SPF and DKIM pass, to protect deliverability.
+
+Emails sent: application received and new-application alert on submit, approval with the portal sign-in link, and a decline notice. `community_inquiries.decision_email_sent_at` makes a repeated Approve click a no-op, and is only stamped after a successful send, so a failed send can be retried by clicking again. With `RESEND_API_KEY` unset, every send is skipped with a server log line instead of silently pretending to work.
+
+## Google sign-in and consent screen branding
+
+Sign-in uses Google Identity Services: the browser obtains a signed ID token from Google on our own origin and hands it to Supabase via `signInWithIdToken`. No redirect URI is involved, so the consent screen shows `handsonacademy.org.ng` and our verified branding rather than the Supabase project URL.
+
+The older redirect flow (`signInWithOAuth` → `/auth/callback`) is still wired up behind a "classic sign-in" fallback button. Both paths share the same approval gate in `lib/auth/admit.ts`.
+
+Required configuration:
+
+- Google Cloud → Clients → HandsOn Academy Web: `https://handsonacademy.org.ng` and `http://localhost:3000` under **Authorized JavaScript origins**.
+- Supabase → Authentication → Providers → Google: the web client ID in **Client IDs**, with **Skip nonce checks** left off. Sign-in sends a real nonce (`lib/auth/nonce.ts`); Google embeds the hashed value in the token and Supabase hashes the raw value to compare.
+- Vercel: `NEXT_PUBLIC_GOOGLE_CLIENT_ID` set to the same client ID.
+
+### Completing branding verification
+
+Google suppresses the app name and logo, showing the redirect URI's domain instead, until the OAuth client is brand-verified. Verification requires proving ownership of every authorized domain, and authorized domains are derived from redirect URIs — so while `https://<project>.supabase.co/auth/v1/callback` is registered, `supabase.co` is an authorized domain that we can never verify.
+
+Once the token flow is confirmed working in production:
+
+1. Google Cloud → Clients → HandsOn Academy Web: delete the `https://<project>.supabase.co/auth/v1/callback` redirect URI. Leave the JavaScript origins in place. **This retires the classic sign-in fallback**, so confirm the new flow first.
+2. Google Cloud → Branding: check that authorized domains now list only `handsonacademy.org.ng`, then submit for verification. Search Console ownership of that domain must be held by the same Google account.
+3. Allow up to a few hours for Google to propagate the change before judging the result.
+
+Only non-sensitive scopes (`openid`, `email`, `profile`) are requested, so no third-party security assessment is required.
 
 ## Smoke test
 
-1. Visit `/login` and sign in with Google.
-2. Open `/dashboard`, choose either free track, open a mission, complete the checklist, and submit evidence.
-3. Open `/admin/submissions` with the admin account and approve or request changes.
-4. Confirm the dashboard mission count changes after completion.
+1. Submit an application at `/apply` with a real address. Confirm the applicant confirmation and the admin alert both arrive.
+2. Approve that application at `/admin/inquiries` with the admin account. Confirm the review panel reports "Applicant emailed" and the approval email arrives with a working `/login` link.
+3. Follow that link and sign in with Google using the approved address. Confirm the consent screen names HandsOn Academy rather than the Supabase URL, and that you reach `/dashboard`.
+   Also sign in with an address that has no approved application and confirm you are turned away with `?error=approval_required`.
+4. Choose either free track, open a mission, complete the checklist, and submit evidence.
+5. Open `/admin/submissions` with the admin account and approve or request changes.
+6. Confirm the dashboard mission count changes after completion.
 
 Payments are intentionally not included. Both tracks and all seeded missions are free.

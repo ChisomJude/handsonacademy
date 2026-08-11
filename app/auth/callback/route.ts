@@ -1,3 +1,23 @@
 import {NextResponse} from 'next/server';
 import {createSupabaseServerClient} from '@/lib/supabase/server';
-export async function GET(request:Request){const url=new URL(request.url);const code=url.searchParams.get('code');if(!code)return NextResponse.redirect(new URL('/login?error=auth_failed',url.origin));const supabase=await createSupabaseServerClient();const {data,error}=await supabase.auth.exchangeCodeForSession(code);if(error||!data.user)return NextResponse.redirect(new URL('/login?error=auth_failed',url.origin));const user=data.user;const isAdmin=user.app_metadata?.role==='admin';if(!isAdmin){const {data:application}=await supabase.from('community_inquiries').select('id').eq('kind','learner').eq('email',(user.email||'').toLowerCase()).eq('status','approved').maybeSingle();if(!application){await supabase.auth.signOut();return NextResponse.redirect(new URL('/login?error=approval_required',url.origin))}}await supabase.from('profiles').upsert({id:user.id,display_name:user.user_metadata?.full_name||user.email?.split('@')[0]||'Learner',avatar_url:user.user_metadata?.avatar_url||null,updated_at:new Date().toISOString()},{onConflict:'id'});return NextResponse.redirect(new URL('/dashboard',url.origin))}
+import {admitLearner} from '@/lib/auth/admit';
+
+/**
+ * Legacy OAuth redirect flow. Retained so sign-in keeps working until the Supabase
+ * redirect URI is removed from the Google client; the Google Identity Services flow
+ * in components/auth/google-signin.tsx never reaches this route.
+ */
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const code = url.searchParams.get('code');
+  if (!code) return NextResponse.redirect(new URL('/login?error=auth_failed', url.origin));
+  const supabase = await createSupabaseServerClient();
+  const {data, error} = await supabase.auth.exchangeCodeForSession(code);
+  if (error || !data.user) return NextResponse.redirect(new URL('/login?error=auth_failed', url.origin));
+  const admission = await admitLearner(supabase, data.user);
+  if (!admission.admitted) {
+    await supabase.auth.signOut();
+    return NextResponse.redirect(new URL(`/login?error=${admission.reason === 'approval_required' ? 'approval_required' : 'auth_failed'}`, url.origin));
+  }
+  return NextResponse.redirect(new URL('/dashboard', url.origin));
+}
