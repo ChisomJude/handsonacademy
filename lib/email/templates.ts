@@ -54,37 +54,7 @@ You are receiving this because you applied to HandsOn Academy.
 const eyebrow = (text: string) => `<p style="margin:0 0 10px;font:600 12px 'DM Mono',Consolas,monospace;letter-spacing:.1em;text-transform:uppercase;color:${BRAND}">${escape(text)}</p>`;
 const heading = (text: string) => `<h1 style="margin:0 0 16px;font-size:27px;line-height:1.2;letter-spacing:-.04em;color:${INK}">${escape(text)}</h1>`;
 const paragraph = (html: string) => `<p style="margin:0 0 15px;font-size:15px;line-height:1.75;color:${MUTED}">${html}</p>`;
-
-/** Sent to the applicant the moment their application is stored. */
-export function applicationReceivedEmail(applicant: {full_name: string; email: string}): EmailMessage {
-  const site = siteUrl();
-  const name = firstName(applicant.full_name);
-  return {
-    to: applicant.email,
-    subject: 'We received your HandsOn Academy application',
-    html: layout('Your application is in the review queue.', [
-      eyebrow('Application received'),
-      heading('Thanks for raising your hand.'),
-      paragraph(`Hi ${name}, your application to HandsOn Academy is in. Our team reviews every application by hand, so give us a few days.`),
-      paragraph(`<strong style="color:${INK}">What happens next:</strong> if you are accepted, you will get an email from us with a link to sign in to the learning portal. Nothing is required from you until then.`),
-      paragraph('In the meantime, it is worth looking at the tracks so you know what you are walking into.'),
-      button(`${site}/tracks`, 'Browse the learning tracks'),
-      paragraph(`If you did not apply to HandsOn Academy, you can ignore this email and we will remove your details.`),
-    ].join('')),
-    text: `Hi ${applicant.full_name.trim().split(/\s+/)[0] || 'there'},
-
-Thanks for applying to HandsOn Academy. Your application is in and our team reviews every one by hand, so give us a few days.
-
-What happens next: if you are accepted, you will get an email from us with a link to sign in to the learning portal. Nothing is required from you until then.
-
-In the meantime, have a look at the tracks: ${site}/tracks
-
-If you did not apply to HandsOn Academy, you can ignore this email.
-
-HandsOn Academy
-${site}`,
-  };
-}
+const bullets = (items: string[]) => `<ul style="margin:0 0 15px;padding-left:20px;font-size:15px;line-height:1.75;color:${MUTED}">${items.map(item => `<li style="margin-bottom:8px">${item}</li>`).join('')}</ul>`;
 
 /** Sent to the applicant when an admin approves them. Carries the portal link. */
 export function applicationApprovedEmail(applicant: {full_name: string; email: string}): EmailMessage {
@@ -132,17 +102,29 @@ export function applicationDeclinedEmail(applicant: {full_name: string; email: s
       eyebrow('Application update'),
       heading('Not this time.'),
       paragraph(`Hi ${name}, thank you for applying to HandsOn Academy. We are not able to offer you a place in the current cohort.`),
-      paragraph('This is not a judgement on your potential. We review applications in batches against the places we can support properly, and we would rather say no than admit more people than we can give real feedback to.'),
-      paragraph('You are welcome to apply again for a future cohort. Applications that show hands-on work you have already attempted stand out most.'),
+      paragraph(`<strong style="color:${INK}">Possible reasons:</strong>`),
+      bullets([
+        'A duplicate application. We already had one from you.',
+        '<strong>You applied with an address that is not Gmail.</strong> Portal access is only available through a Google account at the moment, so we cannot let you in with any other address.',
+        'A security concern, such as a phone number that does not look correct or an email address that looks like spam.',
+      ]),
+      paragraph(`If none of these apply to you, please tell us. Reply directly to this email, or reach us through <a href="${site}/community" style="color:${BRAND}">the community</a>, and we will look at your application again.`),
+      paragraph('You are also welcome to apply again for a future cohort. Applications that show hands-on work you have already attempted stand out most.'),
       button(`${site}/tracks`, 'See what the tracks cover'),
     ].join('')),
     text: `Hi ${applicant.full_name.trim().split(/\s+/)[0] || 'there'},
 
 Thank you for applying to HandsOn Academy. We are not able to offer you a place in the current cohort.
 
-This is not a judgement on your potential. We review applications in batches against the places we can support properly, and we would rather say no than admit more people than we can give real feedback to.
+Possible reasons:
 
-You are welcome to apply again for a future cohort. Applications that show hands-on work you have already attempted stand out most.
+* A duplicate application. We already had one from you.
+* You applied with an address that is not Gmail. Portal access is only available through a Google account at the moment, so we cannot let you in with any other address.
+* A security concern, such as a phone number that does not look correct or an email address that looks like spam.
+
+If none of these apply to you, please tell us. Reply directly to this email, or reach us through the community at ${site}/community, and we will look at your application again.
+
+You are also welcome to apply again for a future cohort. Applications that show hands-on work you have already attempted stand out most.
 
 Tracks: ${site}/tracks
 

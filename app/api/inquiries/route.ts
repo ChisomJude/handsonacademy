@@ -1,7 +1,7 @@
 import {NextResponse} from 'next/server';
 import {createSupabaseServerClient} from '@/lib/supabase/server';
 import {sendEmail} from '@/lib/email/send';
-import {applicationReceivedEmail, newInquiryAlertEmail} from '@/lib/email/templates';
+import {newInquiryAlertEmail} from '@/lib/email/templates';
 
 export async function POST(request: Request) {
   const body = await request.json() as Record<string, string | undefined>;
@@ -23,16 +23,17 @@ export async function POST(request: Request) {
   if (error?.code === '23505') return NextResponse.json({error: 'We already have an application from this email address. Watch your inbox — we reply to every applicant.'}, {status: 409});
   if (error) return NextResponse.json({error: error.message}, {status: 500});
 
-  // Notifications are best-effort and deliberately awaited before the response so
-  // serverless execution is not cut short. sendEmail never throws.
+  // Applying sends the applicant nothing. The approval email is the only message a
+  // learner receives, which keeps email spend to one per admitted learner and avoids
+  // an inbox notice that tells them nothing they did not just read on screen.
   //
-  // The applicant confirmation is off by default: it doubles email spend per
-  // application, and the approval email is the one that actually matters. Set
-  // SEND_APPLICATION_CONFIRMATION=true to turn it back on.
-  const notifications: Promise<unknown>[] = [];
-  if (inquiry.kind === 'learner' && process.env.SEND_APPLICATION_CONFIRMATION === 'true') notifications.push(sendEmail(applicationReceivedEmail(inquiry)));
-  if (process.env.ADMIN_NOTIFICATION_EMAIL && process.env.SEND_ADMIN_ALERTS !== 'false') notifications.push(sendEmail(newInquiryAlertEmail(process.env.ADMIN_NOTIFICATION_EMAIL, inquiry)));
-  await Promise.all(notifications);
+  // The admin alert is opt-in for the same reason: set SEND_ADMIN_ALERTS=true to be
+  // notified of each new application, otherwise watch /admin/inquiries.
+  if (process.env.ADMIN_NOTIFICATION_EMAIL && process.env.SEND_ADMIN_ALERTS === 'true') {
+    // Awaited rather than fired and forgotten: serverless execution can be cut short
+    // once the response is returned. sendEmail never throws.
+    await sendEmail(newInquiryAlertEmail(process.env.ADMIN_NOTIFICATION_EMAIL, inquiry));
+  }
 
   return NextResponse.json({received: true}, {status: 201});
 }

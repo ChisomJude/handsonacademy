@@ -32,13 +32,12 @@ RESEND_API_KEY=<Resend API key>
 EMAIL_FROM=HandsOn Academy <noreply@handsonacademy.org.ng>
 EMAIL_REPLY_TO=hello@handsonacademy.org.ng
 ADMIN_NOTIFICATION_EMAIL=<inbox that should hear about every application>
-SEND_ADMIN_ALERTS=true
-SEND_APPLICATION_CONFIRMATION=false
+SEND_ADMIN_ALERTS=false
 ```
 
 Two of these are quiet failure modes worth checking twice. `EMAIL_FROM` must be an address on the Resend-verified domain, or every send is rejected and you will only see it in the function logs. `NEXT_PUBLIC_SITE_URL` builds every link inside every email, so if it is wrong the approval email points somewhere useless.
 
-Email volume is controlled by the last two. `SEND_APPLICATION_CONFIRMATION` is off by default because it doubles spend per application and the approval email is the one that matters. `SEND_ADMIN_ALERTS=false` silences the per-application notice to `ADMIN_NOTIFICATION_EMAIL` without unsetting the address.
+**Applying sends no email to anyone.** The approval email is the only message a learner ever receives, which holds email spend to one per admitted learner. To be notified yourself when someone applies, set `ADMIN_NOTIFICATION_EMAIL` and `SEND_ADMIN_ALERTS=true`; each alert costs one email against the quota, so leaving it off and watching `/admin/inquiries` is the cheaper habit.
 
 Turnstile keys are required before enabling bot protection on public forms. Create a Cloudflare Turnstile widget restricted to `handsonacademy.org.ng` and provide its site key and secret key in Vercel. Never expose the secret key in client code. When `TURNSTILE_SECRET_KEY` is absent the bot check is skipped rather than failing closed, so `/api/inquiries` is an open insert until you set it.
 
@@ -53,7 +52,7 @@ Transactional email uses [Resend](https://resend.com), whose free tier covers 3,
 5. Set `ADMIN_NOTIFICATION_EMAIL` so new applications reach you without opening the admin inbox.
 6. Consider adding a DMARC record (`_dmarc.handsonacademy.org.ng`) once SPF and DKIM pass, to protect deliverability.
 
-Emails sent: the new-application alert to the admin inbox on submit, approval with the portal sign-in link, and a decline notice. The applicant confirmation exists but is off by default. `community_inquiries.decision_email_sent_at` makes a repeated Approve click a no-op, and is only stamped after a successful send, so a failed send can be retried by clicking again. With `RESEND_API_KEY` unset, every send is skipped with a server log line instead of silently pretending to work.
+Emails sent: approval carrying the portal sign-in link, a decline notice, and optionally a new-application alert to the admin inbox. Applicants receive nothing when they apply. `community_inquiries.decision_email_sent_at` makes a repeated Approve click a no-op, and is only stamped after a successful send, so a failed send can be retried by clicking again. With `RESEND_API_KEY` unset, every send is skipped with a server log line instead of silently pretending to work.
 
 ## Google sign-in and consent screen branding
 
@@ -81,7 +80,7 @@ Only non-sensitive scopes (`openid`, `email`, `profile`) are requested, so no th
 
 ## Smoke test
 
-1. Submit an application at `/apply` with a real address, both signed out and while signed in as a different account. Confirm the admin alert arrives and neither attempt errors. Submitting the same address twice should give a friendly "we already have an application" message, not a server error.
+1. Submit an application at `/apply` with a real address, both signed out and while signed in as a different account. Neither attempt should error, and the applicant should receive **no** email. Submitting the same address twice should give a friendly "we already have an application" message, not a server error.
 2. Approve that application at `/admin/inquiries` with the admin account. Confirm the result line reports it was emailed and the approval email arrives with a working `/login` link.
 3. Follow that link and sign in with Google using the approved address. Confirm the consent screen names HandsOn Academy rather than the Supabase URL, and that you reach `/dashboard`.
    Also sign in with an address that has no approved application and confirm you are turned away with `?error=approval_required`.
@@ -114,7 +113,7 @@ where kind = 'learner' and status = 'approved' and decision_email_sent_at is nul
 
 ## Go-live checklist
 
-1. Run migrations `001` then `002` in the Supabase SQL Editor. **Migration 002 must be applied before deploying this version** — the admin decision path writes `status_updated_at`, and without that column every approval returns a 500.
+1. Run migrations `001` then `002` in the Supabase SQL Editor. **Migration 002 must be applied before deploying this version** — the admin decision path writes `status_updated_at`, and without that column every approval is rejected by Postgres. The request still returns 200, reporting `0 updated · N failed`, and nobody is emailed.
 2. Confirm all Vercel variables above are set for Production, `EMAIL_FROM` is on the Resend-verified domain, and the domain shows verified in Resend with SPF and DKIM passing.
 3. Confirm the Google client lists both JavaScript origins, and that Supabase carries the client ID under Authentication → Providers → Google → Client IDs with **Skip nonce checks** off.
 4. Deploy, then work through the smoke test above.

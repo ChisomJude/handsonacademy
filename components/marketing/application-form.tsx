@@ -1,2 +1,59 @@
-"use client";import {useState} from "react";import {TurnstileWidget} from './turnstile-widget';
-export function ApplicationForm(){const [submitted,setSubmitted]=useState(false);const [saving,setSaving]=useState(false);const [error,setError]=useState('');const [turnstileToken,setTurnstileToken]=useState('');async function submit(e:React.FormEvent<HTMLFormElement>){e.preventDefault();setSaving(true);setError('');const values=Object.fromEntries(new FormData(e.currentTarget).entries());const res=await fetch('/api/inquiries',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...values,kind:'learner',consent:values.consent==='on'?'true':'false',turnstile_token:turnstileToken})});if(!res.ok){const body=await res.json().catch(()=>({}));setError(body.error||'We could not send your application. Please try again.');setSaving(false);return}setSubmitted(true);setSaving(false)}if(submitted)return <div className="card" style={{padding:30}}><span className="tag">Application received</span><h2>Thanks for raising your hand.</h2><p className="lede">We have your application. Every one is reviewed by hand — if you are accepted, we will email you a link to sign in to the learning portal. Nothing is needed from you until then.</p></div>;return <form className="card" style={{padding:28}} onSubmit={submit}><div className="form-field"><label htmlFor="name">Full name</label><input id="name" name="full_name" required/></div><div className="form-field"><label htmlFor="email">Email</label><input id="email" name="email" type="email" required/></div><div className="form-field"><label htmlFor="phone">Phone number</label><input id="phone" name="phone" type="tel" autoComplete="tel" placeholder="+234 800 000 0000" required/></div><div className="form-field"><label htmlFor="country">Country</label><input id="country" name="country" required/></div><div className="form-field"><label htmlFor="experience">Experience level</label><select id="experience" name="focus" required defaultValue=""><option value="" disabled>Select one</option><option>Beginner</option><option>Intermediate</option><option>Advanced</option></select></div><div className="form-field"><label htmlFor="interest">Career interest</label><select id="interest" name="organization" required defaultValue=""><option value="" disabled>Select one</option>{['DevOps','Cloud','Cloud Native','SRE','Backend Engineering','Cybersecurity','Other'].map(x=><option key={x}>{x}</option>)}</select></div><div className="form-field"><label htmlFor="why">Why do you want to join?</label><textarea id="why" name="message" rows={5} required/></div><label style={{display:'flex',gap:9,alignItems:'flex-start',fontSize:12,lineHeight:1.5,margin:'14px 0'}}><input type="checkbox" name="consent" required/> I agree that HandsOn Academy may use these details to review my application and contact me about admission and learning updates.</label><TurnstileWidget onToken={setTurnstileToken}/>{error&&<p role="alert" style={{color:'#b9462b',fontSize:13}}>{error}</p>}<button className="btn btn-primary" disabled={saving||Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY&&!turnstileToken)}>{saving?'Sending…':'Send application'}</button></form>}
+"use client";
+import {useState} from "react";
+import {TurnstileWidget} from './turnstile-widget';
+
+// Portal sign-in runs through Google, so an address with no Google account behind it
+// can never be admitted however strong the application is. Warn at the point of
+// typing rather than spending a rejection on something knowable here. Deliberately a
+// nudge and not a block: Google Workspace accounts on custom domains sign in fine.
+const GOOGLE_DOMAINS = /@(gmail\.com|googlemail\.com)$/i;
+
+export function ApplicationForm() {
+  const [submitted, setSubmitted] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [email, setEmail] = useState('');
+  const [turnstileToken, setTurnstileToken] = useState('');
+
+  const trimmed = email.trim();
+  const nonGoogle = trimmed.includes('@') && trimmed.includes('.') && !GOOGLE_DOMAINS.test(trimmed);
+
+  async function submit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setSaving(true);
+    setError('');
+    const values = Object.fromEntries(new FormData(e.currentTarget).entries());
+    const res = await fetch('/api/inquiries', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({...values, kind: 'learner', consent: values.consent === 'on' ? 'true' : 'false', turnstile_token: turnstileToken})});
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setError(body.error || 'We could not send your application. Please try again.');
+      setSaving(false);
+      return;
+    }
+    setSubmitted(true);
+    setSaving(false);
+  }
+
+  if (submitted) return <div className="card" style={{padding: 30}}><span className="tag">Application received</span><h2>Thanks for raising your hand.</h2><p className="lede">We have your application. Every one is reviewed by hand, and if you are accepted we will email you a link to sign in to the learning portal. Nothing is needed from you until then.</p></div>;
+
+  return <form className="card" style={{padding: 28}} onSubmit={submit}>
+    <div className="form-field"><label htmlFor="name">Full name</label><input id="name" name="full_name" required /></div>
+    <div className="form-field">
+      <label htmlFor="email">Email</label>
+      <input id="email" name="email" type="email" required value={email} onChange={event => setEmail(event.target.value)} aria-describedby="email-hint" />
+      <small id="email-hint" style={{color: 'var(--muted)', fontSize: 12, lineHeight: 1.5}}>Use the Google account you will sign in with. Portal access is through Google only.</small>
+      {nonGoogle && <small role="status" style={{color: '#8a6d1f', fontSize: 12, lineHeight: 1.5, background: '#fdf6e6', border: '1px solid #e8d9a8', borderRadius: 7, padding: '8px 10px'}}>
+        This does not look like a Google address. You can still apply, but we can only give portal access to an email that has a Google account behind it, so a Gmail address is the safest choice.
+      </small>}
+    </div>
+    <div className="form-field"><label htmlFor="phone">Phone number</label><input id="phone" name="phone" type="tel" autoComplete="tel" placeholder="+234 800 000 0000" required /></div>
+    <div className="form-field"><label htmlFor="country">Country</label><input id="country" name="country" required /></div>
+    <div className="form-field"><label htmlFor="experience">Experience level</label><select id="experience" name="focus" required defaultValue=""><option value="" disabled>Select one</option><option>Beginner</option><option>Intermediate</option><option>Advanced</option></select></div>
+    <div className="form-field"><label htmlFor="interest">Career interest</label><select id="interest" name="organization" required defaultValue=""><option value="" disabled>Select one</option>{['DevOps', 'Cloud', 'Cloud Native', 'SRE', 'Backend Engineering', 'Cybersecurity', 'Other'].map(x => <option key={x}>{x}</option>)}</select></div>
+    <div className="form-field"><label htmlFor="why">Why do you want to join?</label><textarea id="why" name="message" rows={5} required /></div>
+    <label style={{display: 'flex', gap: 9, alignItems: 'flex-start', fontSize: 12, lineHeight: 1.5, margin: '14px 0'}}><input type="checkbox" name="consent" required /> I agree that HandsOn Academy may use these details to review my application and contact me about admission and learning updates.</label>
+    <TurnstileWidget onToken={setTurnstileToken} />
+    {error && <p role="alert" style={{color: '#b9462b', fontSize: 13}}>{error}</p>}
+    <button className="btn btn-primary" disabled={saving || Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && !turnstileToken)}>{saving ? 'Sending…' : 'Send application'}</button>
+  </form>;
+}

@@ -22,7 +22,7 @@ This is the spine of the product, and every part of it is deliberate:
 
 - **Payments.** Both tracks and all missions are free. There is no billing code.
 - **Self-service signup.** Portal access always passes through a human decision.
-- **Applicant confirmation email.** Off by default to conserve email quota; the approval email is the one that matters.
+- **Any email on applying.** Applicants receive nothing when they apply; the page already tells them what happens next. The approval email is the only message a learner gets, which holds email cost to one per admitted learner.
 
 ## Current shape
 
