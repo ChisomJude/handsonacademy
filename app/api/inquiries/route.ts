@@ -1,7 +1,5 @@
 import {NextResponse} from 'next/server';
 import {createSupabaseServerClient} from '@/lib/supabase/server';
-import {sendEmail} from '@/lib/email/send';
-import {newInquiryAlertEmail} from '@/lib/email/templates';
 
 export async function POST(request: Request) {
   const body = await request.json() as Record<string, string | undefined>;
@@ -23,17 +21,8 @@ export async function POST(request: Request) {
   if (error?.code === '23505') return NextResponse.json({error: 'We already have an application from this email address. Watch your inbox — we reply to every applicant.'}, {status: 409});
   if (error) return NextResponse.json({error: error.message}, {status: 500});
 
-  // Applying sends the applicant nothing. The approval email is the only message a
-  // learner receives, which keeps email spend to one per admitted learner and avoids
-  // an inbox notice that tells them nothing they did not just read on screen.
-  //
-  // The admin alert is opt-in for the same reason: set SEND_ADMIN_ALERTS=true to be
-  // notified of each new application, otherwise watch /admin/inquiries.
-  if (process.env.ADMIN_NOTIFICATION_EMAIL && process.env.SEND_ADMIN_ALERTS === 'true') {
-    // Awaited rather than fired and forgotten: serverless execution can be cut short
-    // once the response is returned. sendEmail never throws.
-    await sendEmail(newInquiryAlertEmail(process.env.ADMIN_NOTIFICATION_EMAIL, inquiry));
-  }
-
+  // Applying sends no email to anyone, applicant or admin. The approval email is the
+  // only message this system ever produces for a learner, which holds email spend to
+  // one per admitted learner. New applications are found in /admin/inquiries.
   return NextResponse.json({received: true}, {status: 201});
 }

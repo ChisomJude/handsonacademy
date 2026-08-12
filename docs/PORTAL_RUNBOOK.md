@@ -31,13 +31,11 @@ NEXT_PUBLIC_GOOGLE_CLIENT_ID=<Google OAuth web client ID>
 RESEND_API_KEY=<Resend API key>
 EMAIL_FROM=HandsOn Academy <noreply@handsonacademy.org.ng>
 EMAIL_REPLY_TO=hello@handsonacademy.org.ng
-ADMIN_NOTIFICATION_EMAIL=<inbox that should hear about every application>
-SEND_ADMIN_ALERTS=false
 ```
 
 Two of these are quiet failure modes worth checking twice. `EMAIL_FROM` must be an address on the Resend-verified domain, or every send is rejected and you will only see it in the function logs. `NEXT_PUBLIC_SITE_URL` builds every link inside every email, so if it is wrong the approval email points somewhere useless.
 
-**Applying sends no email to anyone.** The approval email is the only message a learner ever receives, which holds email spend to one per admitted learner. To be notified yourself when someone applies, set `ADMIN_NOTIFICATION_EMAIL` and `SEND_ADMIN_ALERTS=true`; each alert costs one email against the quota, so leaving it off and watching `/admin/inquiries` is the cheaper habit.
+**Applying sends no email to anyone, applicant or admin.** The approval and decline messages are the only email this system produces, holding spend to one per decided applicant. New applications arrive silently, so `/admin/inquiries` needs checking on a rhythm while a cohort is open — nothing will land in your inbox to prompt you.
 
 Turnstile keys are required before enabling bot protection on public forms. Create a Cloudflare Turnstile widget restricted to `handsonacademy.org.ng` and provide its site key and secret key in Vercel. Never expose the secret key in client code. When `TURNSTILE_SECRET_KEY` is absent the bot check is skipped rather than failing closed, so `/api/inquiries` is an open insert until you set it.
 
@@ -49,10 +47,9 @@ Transactional email uses [Resend](https://resend.com), whose free tier covers 3,
 2. Add the SPF and DKIM DNS records Resend generates to your domain's DNS, and wait for the domain to show as verified. Mail sent from an unverified domain will be rejected or land in spam.
 3. Create an API key with send permission and set `RESEND_API_KEY` in Vercel.
 4. Set `EMAIL_FROM` to an address on the verified domain. `EMAIL_REPLY_TO` should be an inbox a human reads, since applicants will reply to these emails.
-5. Set `ADMIN_NOTIFICATION_EMAIL` so new applications reach you without opening the admin inbox.
-6. Consider adding a DMARC record (`_dmarc.handsonacademy.org.ng`) once SPF and DKIM pass, to protect deliverability.
+5. Consider adding a DMARC record (`_dmarc.handsonacademy.org.ng`) once SPF and DKIM pass, to protect deliverability.
 
-Emails sent: approval carrying the portal sign-in link, a decline notice, and optionally a new-application alert to the admin inbox. Applicants receive nothing when they apply. `community_inquiries.decision_email_sent_at` makes a repeated Approve click a no-op, and is only stamped after a successful send, so a failed send can be retried by clicking again. With `RESEND_API_KEY` unset, every send is skipped with a server log line instead of silently pretending to work.
+Emails sent: approval carrying the portal sign-in link, and a decline notice listing the common reasons and inviting a reply. Nothing at all is sent when someone applies. Because the decline invites a reply, `EMAIL_REPLY_TO` must be an inbox a human actually reads. `community_inquiries.decision_email_sent_at` makes a repeated Approve click a no-op, and is only stamped after a successful send, so a failed send can be retried by clicking again. With `RESEND_API_KEY` unset, every send is skipped with a server log line instead of silently pretending to work.
 
 ## Google sign-in and consent screen branding
 

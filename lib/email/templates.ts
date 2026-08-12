@@ -14,12 +14,6 @@ function escape(value: string): string {
   return value.replace(/[&<>"']/g, character => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[character] as string));
 }
 
-/** Collapses newlines and clamps length so a pasted name cannot mangle a subject line. */
-function subjectSafe(value: string): string {
-  const flattened = value.replace(/\s+/g, ' ').trim();
-  return flattened.length > 78 ? `${flattened.slice(0, 75)}...` : flattened;
-}
-
 /** First name where we have one, falling back to a warm generic greeting. */
 function firstName(fullName: string): string {
   const first = fullName.trim().split(/\s+/)[0];
@@ -130,38 +124,5 @@ Tracks: ${site}/tracks
 
 HandsOn Academy
 ${site}`,
-  };
-}
-
-/** Sent to the admin inbox so new applications are not missed. */
-export function newInquiryAlertEmail(recipient: string, inquiry: {kind: string; full_name: string; email: string; phone: string; country?: string | null; organization?: string | null; focus?: string | null; message: string}): EmailMessage {
-  const site = siteUrl();
-  const label = inquiry.kind === 'learner' ? 'application' : `${inquiry.kind} inquiry`;
-  const rows: Array<[string, string]> = [
-    ['Name', inquiry.full_name],
-    ['Email', inquiry.email],
-    ['Phone', inquiry.phone],
-    ['Country', inquiry.country || '—'],
-    ['Interest', inquiry.organization || '—'],
-    ['Experience', inquiry.focus || '—'],
-  ];
-  return {
-    to: recipient,
-    replyTo: inquiry.email,
-    subject: `New ${label}: ${subjectSafe(inquiry.full_name)}`,
-    html: layout(`${inquiry.full_name} submitted a new ${label}.`, [
-      eyebrow(`New ${label}`),
-      heading(inquiry.full_name),
-      `<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;margin:0 0 18px;font-size:14px">${rows.map(([key, value]) => `<tr><td style="padding:6px 12px 6px 0;color:${MUTED};white-space:nowrap">${escape(key)}</td><td style="padding:6px 0;color:${INK};font-weight:600">${escape(value)}</td></tr>`).join('')}</table>`,
-      paragraph(`<span style="white-space:pre-wrap">${escape(inquiry.message)}</span>`),
-      button(`${site}/admin/inquiries`, inquiry.kind === 'learner' ? 'Review this application' : 'Open the inbox'),
-    ].join('')),
-    text: `New ${label}
-
-${rows.map(([key, value]) => `${key}: ${value}`).join('\n')}
-
-${inquiry.message}
-
-Review: ${site}/admin/inquiries`,
   };
 }
