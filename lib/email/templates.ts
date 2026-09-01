@@ -147,3 +147,14 @@ export function eventRegistrationEmail(registration: {full_name: string; email: 
     text: `Hi ${registration.full_name.trim().split(/\s+/)[0] || 'there'},\n\nYou’re registered for ${event.title}.${when ? `\nStarts: ${when}` : ''}${event.call_link ? `\nEvent link: ${event.call_link}` : ''}\n\nWe’ll send further updates and important event information to this email address.\n\nHandsOn Academy\n${site}`,
   };
 }
+
+/** A hand-written update sent by an administrator to opted-in community contacts. */
+export function announcementEmail(recipient: string, announcement: {title: string; body: string}): EmailMessage {
+  const textBody = announcement.body.trim();
+  return {
+    to: recipient,
+    subject: announcement.title.trim(),
+    html: layout(announcement.title, [eyebrow('HandsOn Academy update'), heading(announcement.title), paragraph(escape(textBody).replace(/\n/g, '<br>'))].join('')),
+    text: `${announcement.title.trim()}\n\n${textBody}\n\nHandsOn Academy\n${siteUrl()}`,
+  };
+}
