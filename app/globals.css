@@ -7,3 +7,6 @@
 /* Guided lesson layout safeguards */
 .lesson-page{overflow:hidden}.lesson-page .card{min-width:0}.lesson-page ul{padding-left:22px}.lesson-page li{overflow-wrap:anywhere}.setup-grid>div{min-width:0}.setup-grid ul{padding-left:20px}@media(max-width:780px){.lesson-page{padding-left:16px!important;padding-right:16px!important}.lesson-page .card{padding:18px!important}.lesson-page h1{line-height:1.06}.setup-grid{gap:18px!important}}
 @media(max-width:760px){html,body{max-width:100%;overflow-x:hidden}.dashboard-body,.dashboard-body main{max-width:100%;overflow-x:hidden}.dashboard-body main{display:block}.lesson-page .card,.lesson-page section{max-width:100%;overflow:hidden}.lesson-page pre{max-width:100%;overflow-x:auto;font-size:11px}.lesson-page textarea{max-width:100%;resize:vertical}.dash-content{width:100%;max-width:100%}}
+/* Event flyers stay whole and readable, even when an event form makes the card
+   taller than the artwork or when an admin uploads a landscape/portrait image. */
+.event-card .event-flyer{align-self:start;aspect-ratio:3/4;min-height:0;background:#f3f7f5}.event-card .event-flyer img{object-fit:contain!important}@media(max-width:760px){.event-card .event-flyer{aspect-ratio:4/5;min-height:0}}
