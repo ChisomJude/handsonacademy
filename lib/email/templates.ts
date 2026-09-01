@@ -126,3 +126,24 @@ HandsOn Academy
 ${site}`,
   };
 }
+
+/** Immediate confirmation for a bootcamp or webinar registration. */
+export function eventRegistrationEmail(registration: {full_name: string; email: string}, event: {title: string; event_type: string; event_starts_at: string | null; event_ends_at: string | null; call_link: string | null}): EmailMessage {
+  const site = siteUrl();
+  const name = firstName(registration.full_name);
+  const when = event.event_starts_at ? new Intl.DateTimeFormat('en', {dateStyle: 'full', timeStyle: 'short'}).format(new Date(event.event_starts_at)) : null;
+  const kind = event.event_type === 'bootcamp' ? 'bootcamp' : 'webinar';
+  const details = [when && `<strong style="color:${INK}">Starts:</strong> ${escape(when)}`, event.call_link && `<strong style="color:${INK}">Event link:</strong> <a href="${escape(event.call_link)}" style="color:${BRAND}">Open the event link</a>`].filter(Boolean).join('<br>');
+  return {
+    to: registration.email,
+    subject: `You’re registered for ${event.title}`,
+    html: layout(`Your ${kind} registration is confirmed.`, [
+      eyebrow(`${kind} registration`), heading('You’re on the list.'),
+      paragraph(`Hi ${name}, we’ve received your registration for <strong style="color:${INK}">${escape(event.title)}</strong>.`),
+      details && paragraph(details),
+      paragraph('We’ll send further updates and important event information to this email address. Please keep an eye on your inbox.'),
+      button(`${site}/bootcamp`, 'View bootcamps'),
+    ].join('')),
+    text: `Hi ${registration.full_name.trim().split(/\s+/)[0] || 'there'},\n\nYou’re registered for ${event.title}.${when ? `\nStarts: ${when}` : ''}${event.call_link ? `\nEvent link: ${event.call_link}` : ''}\n\nWe’ll send further updates and important event information to this email address.\n\nHandsOn Academy\n${site}`,
+  };
+}

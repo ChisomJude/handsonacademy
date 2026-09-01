@@ -1,0 +1,26 @@
+import {NextResponse} from 'next/server';
+import {createSupabaseServerClient} from '@/lib/supabase/server';
+
+type EventPayload = {title?: string; description?: string; event_type?: string; flyer_url?: string | null; application_deadline?: string | null; event_starts_at?: string | null; event_ends_at?: string | null; call_link?: string | null; registration_mode?: string; luma_url?: string | null; is_active?: boolean};
+function clean(value: unknown) { return typeof value === 'string' ? value.trim() || null : null; }
+function bounded(value: unknown, minimum: number, maximum: number) { const result = clean(value); return result && result.length >= minimum && result.length <= maximum ? result : null; }
+function date(value: unknown) { const result = clean(value); return !result || Number.isNaN(new Date(result).getTime()) ? (result ? undefined : null) : new Date(result).toISOString(); }
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+function validUrl(value: string | null) { if (!value) return true; try { const url = new URL(value); return url.protocol === 'https:' || url.protocol === 'http:'; } catch { return false; } }
+async function admin() { const supabase = await createSupabaseServerClient(); const {data: {user}} = await supabase.auth.getUser(); return user?.app_metadata?.role === 'admin' ? supabase : null; }
+function normalize(body: EventPayload) {
+  const title = bounded(body.title, 2, 160), description = bounded(body.description, 10, 5000), event_type = body.event_type;
+  const registration_mode = body.registration_mode;
+  const flyer_url = clean(body.flyer_url), call_link = clean(body.call_link), luma_url = clean(body.luma_url);
+  if (!title || !description || !['bootcamp', 'webinar'].includes(event_type || '') || !['website', 'luma'].includes(registration_mode || '')) return {error: 'Title, description, type, and registration choice are required.'};
+  if (registration_mode === 'luma' && !luma_url) return {error: 'Add the Luma application link.'};
+  if (![flyer_url, call_link, luma_url].every(validUrl)) return {error: 'Links must be valid http(s) URLs.'};
+  const application_deadline = date(body.application_deadline), event_starts_at = date(body.event_starts_at), event_ends_at = date(body.event_ends_at);
+  if (application_deadline === undefined || event_starts_at === undefined || event_ends_at === undefined) return {error: 'Dates must be valid.'};
+  if (event_starts_at && event_ends_at && event_ends_at < event_starts_at) return {error: 'The event end must be after its start.'};
+  return {data: {title, description, event_type, flyer_url, call_link, luma_url, registration_mode, application_deadline, event_starts_at, event_ends_at, is_active: Boolean(body.is_active), updated_at: new Date().toISOString()}};
+}
+async function payload(request: Request) { try { return await request.json() as EventPayload & {id?: string}; } catch { return null; } }
+export async function POST(request: Request) { const supabase = await admin(); if (!supabase) return NextResponse.json({error: 'Admin access required'}, {status: 403}); const body = await payload(request); if (!body) return NextResponse.json({error: 'Invalid request.'}, {status: 400}); const result = normalize(body); if ('error' in result) return NextResponse.json(result, {status: 400}); const {data, error} = await supabase.from('events').insert(result.data).select().single(); return error ? NextResponse.json({error: error.message}, {status: 500}) : NextResponse.json(data, {status: 201}); }
+export async function PATCH(request: Request) { const supabase = await admin(); if (!supabase) return NextResponse.json({error: 'Admin access required'}, {status: 403}); const body = await payload(request); if (!body || !body.id || !UUID.test(body.id)) return NextResponse.json({error: 'A valid event id is required.'}, {status: 400}); const result = normalize(body); if ('error' in result) return NextResponse.json(result, {status: 400}); const {data, error} = await supabase.from('events').update(result.data).eq('id', body.id).select().single(); return error ? NextResponse.json({error: error.message}, {status: 500}) : NextResponse.json(data); }
+export async function DELETE(request: Request) { const supabase = await admin(); if (!supabase) return NextResponse.json({error: 'Admin access required'}, {status: 403}); const id = new URL(request.url).searchParams.get('id'); if (!id || !UUID.test(id)) return NextResponse.json({error: 'A valid event id is required.'}, {status: 400}); const {error} = await supabase.from('events').delete().eq('id', id); return error ? NextResponse.json({error: error.message}, {status: 500}) : NextResponse.json({deleted: true}); }
