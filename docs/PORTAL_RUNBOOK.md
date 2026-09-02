@@ -4,10 +4,37 @@
 
 The frontend and API route handlers run together on Vercel. The learner browser calls `/api/progress` and `/api/submissions` on the same domain, and those handlers use Supabase Auth/Postgres. Render is not required for the current free-course portal. Add a Render service only if you later need a separate long-running API or worker.
 
+## Database migrations
+
+**Migrations apply themselves.** `.github/workflows/database-migrations.yml` replays every file in `supabase/migrations/` against production whenever a push to `master` touches that folder, and on demand from the Actions tab (**Run workflow**). Nothing needs pasting into the SQL Editor any more.
+
+Every migration is written to be rerun safely — `create table if not exists`, `add column if not exists`, `drop policy if exists` before each `create policy`, seed rows guarded by `on conflict` or `not exists` — so replaying the whole set on a current database is a no-op. That is what lets the workflow stay stateless rather than tracking which files have run, and it is the rule to follow when adding `005` and beyond. Each file is applied with `--single-transaction`, so a failing statement rolls its whole file back instead of leaving the schema half-changed.
+
+### One-time setup for the workflow
+
+Add one repository secret under **Settings → Secrets and variables → Actions**:
+
+| Secret | Where it comes from |
+| --- | --- |
+| `SUPABASE_DB_URL` | Supabase → Project Settings → Database → Connection string → **Session pooler**, with the database password filled in |
+
+Use the **Session pooler** URI, not the direct `db.<ref>.supabase.co` one: direct connections are IPv6-only and GitHub-hosted runners have no IPv6 route, so the direct host times out. The secret carries the database password, so it belongs nowhere except GitHub secrets.
+
+### Ordering against the app deploy
+
+Vercel builds from the same push, in parallel with this workflow, so a migration is not guaranteed to land before the code that needs it. Migrations here are additive (new tables, new nullable columns), which tolerates either order. When a change is **not** additive — a column the new code cannot run without, like `status_updated_at` was for migration 002 — run the workflow manually from the Actions tab first, confirm it is green, and only then merge the code. To remove the race permanently, turn off Vercel's Git auto-deploy and add a deploy job to this workflow that runs after `apply`.
+
+### Adding a migration
+
+1. Write `supabase/migrations/005_your_change.sql` in the rerun-safe style above.
+2. Push to `master`. The workflow applies it and lists what it ran in the job summary.
+3. Watch the run. A red run means production did not get the change — read the log, fix the SQL, push again.
+
+Migration 002 auto-closes duplicate live applications for the same email address before adding a unique index that prevents new ones; review `/admin/inquiries` afterwards if you expect duplicates.
+
 ## One-time Supabase setup
 
-1. Run `supabase/migrations/001_learning_engine.sql`, then `supabase/migrations/002_application_emails.sql`, in the Supabase SQL Editor. Both are safe to rerun and neither deletes tables or course data. Migration 002 auto-closes duplicate live applications for the same email address before adding a unique index that prevents new ones; review `/admin/inquiries` afterwards if you expect duplicates.
-2. Set your own account as admin (replace the email):
+1. Set your own account as admin (replace the email):
 
 ```sql
 update auth.users
@@ -15,7 +42,7 @@ set raw_app_meta_data = coalesce(raw_app_meta_data, '{}'::jsonb) || jsonb_build_
 where email = 'you@example.com';
 ```
 
-3. Sign out and sign back in so the refreshed JWT contains the admin role.
+2. Sign out and sign back in so the refreshed JWT contains the admin role.
 
 ## Vercel variables
 
@@ -110,7 +137,7 @@ where kind = 'learner' and status = 'approved' and decision_email_sent_at is nul
 
 ## Go-live checklist
 
-1. Run migrations `001` then `002` in the Supabase SQL Editor. **Migration 002 must be applied before deploying this version** — the admin decision path writes `status_updated_at`, and without that column every approval is rejected by Postgres. The request still returns 200, reporting `0 updated · N failed`, and nobody is emailed.
+1. Confirm the **Database migrations** workflow has run green against production (Actions tab). **Migration 002 must be applied before deploying this version** — the admin decision path writes `status_updated_at`, and without that column every approval is rejected by Postgres. The request still returns 200, reporting `0 updated · N failed`, and nobody is emailed. On a first deploy, run the workflow manually before the app goes out.
 2. Confirm all Vercel variables above are set for Production, `EMAIL_FROM` is on the Resend-verified domain, and the domain shows verified in Resend with SPF and DKIM passing.
 3. Confirm the Google client lists both JavaScript origins, and that Supabase carries the client ID under Authentication → Providers → Google → Client IDs with **Skip nonce checks** off.
 4. Deploy, then work through the smoke test above.

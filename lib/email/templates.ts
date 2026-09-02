@@ -1,4 +1,5 @@
 import {siteUrl, type EmailMessage} from './send';
+import {EVENT_TIME_ZONE} from '../events';
 
 // Brand tokens mirrored from app/globals.css. Email clients ignore CSS custom
 // properties and external stylesheets, so every value is inlined literally.
@@ -131,7 +132,7 @@ ${site}`,
 export function eventRegistrationEmail(registration: {full_name: string; email: string}, event: {title: string; event_type: string; event_starts_at: string | null; event_ends_at: string | null; call_link: string | null}): EmailMessage {
   const site = siteUrl();
   const name = firstName(registration.full_name);
-  const when = event.event_starts_at ? new Intl.DateTimeFormat('en', {dateStyle: 'full', timeStyle: 'short'}).format(new Date(event.event_starts_at)) : null;
+  const when = event.event_starts_at ? new Intl.DateTimeFormat('en', {timeZone: EVENT_TIME_ZONE, weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short'}).format(new Date(event.event_starts_at)) : null;
   const kind = event.event_type === 'bootcamp' ? 'bootcamp' : 'webinar';
   const details = [when && `<strong style="color:${INK}">Starts:</strong> ${escape(when)}`, event.call_link && `<strong style="color:${INK}">Event link:</strong> <a href="${escape(event.call_link)}" style="color:${BRAND}">Open the event link</a>`].filter(Boolean).join('<br>');
   return {

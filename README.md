@@ -51,4 +51,4 @@ App Router pages are server-rendered; interactive pieces are small client island
 - Announcements exist in the database with no editor and no learner-facing display.
 - Speakers share the `mentor` inquiry kind.
 - Payments are not implemented; every track and mission is free.
-- No automated test suite and no CI.
+- No automated test suite. CI covers database migrations only (`.github/workflows/database-migrations.yml`); the app itself deploys straight from Vercel's Git integration.

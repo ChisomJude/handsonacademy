@@ -66,6 +66,10 @@ create policy "admins delete event flyers" on storage.objects for delete using (
 -- Initial public cohort from the supplied campaign flyer. The call link can be
 -- added in Admin when it is confirmed; the supplied flyer itself can be uploaded
 -- there to avoid committing a private desktop asset to the repository.
+--
+-- Seeds only into an empty table. This file replays on every deploy, so a title
+-- match is not a strong enough guard: once an admin edits the title or deletes
+-- the cohort, a title check would silently recreate it with these fixed times.
 insert into public.events (title, description, event_type, application_deadline, event_starts_at, event_ends_at, is_active)
 select 'Testing the Cloud Native Waters', 'An 8-week Cloud Native bootcamp for beginners. Build real skills, challenge yourself, and learn with mentors across Africa. Sessions run every Saturday.', 'bootcamp', '2026-09-18T23:59:59+00', '2026-09-19T09:00:00+00', '2026-11-07T17:00:00+00', true
-where not exists (select 1 from public.events where title = 'Testing the Cloud Native Waters');
+where not exists (select 1 from public.events);
