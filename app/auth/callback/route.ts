@@ -19,5 +19,11 @@ export async function GET(request: Request) {
     await supabase.auth.signOut();
     return NextResponse.redirect(new URL(`/login?error=${admission.reason === 'approval_required' ? 'approval_required' : 'auth_failed'}`, url.origin));
   }
+  // A just-promoted admin is holding a session minted before the role existed;
+  // refreshing here rewrites the cookies so /admin recognises them on arrival.
+  if (admission.promoted) {
+    await supabase.auth.refreshSession();
+    return NextResponse.redirect(new URL('/admin', url.origin));
+  }
   return NextResponse.redirect(new URL('/dashboard', url.origin));
 }

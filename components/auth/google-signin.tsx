@@ -53,7 +53,8 @@ export function GoogleSignIn({onError, onBusy}: {onError: (message: string) => v
     async function handleCredential(credential: string, nonce: string) {
       onBusy(true); onError('');
       try {
-        const {error} = await createSupabaseBrowserClient().auth.signInWithIdToken({provider: 'google', token: credential, nonce});
+        const client = createSupabaseBrowserClient();
+        const {error} = await client.auth.signInWithIdToken({provider: 'google', token: credential, nonce});
         if (error) { onError(error.message); onBusy(false); return; }
         // The session cookie now exists, so the approval gate can run server-side.
         const response = await fetch('/api/auth/session', {method: 'POST'});
@@ -65,7 +66,12 @@ export function GoogleSignIn({onError, onBusy}: {onError: (message: string) => v
           onBusy(false);
           return;
         }
-        router.push('/dashboard');
+        // Claiming an admin invite happens server-side during that call, so the
+        // session in hand predates the role. Refresh it before routing, or /admin
+        // would greet a brand-new admin with "access is restricted".
+        const {promoted} = await response.json().catch(() => ({promoted: false})) as {promoted?: boolean};
+        if (promoted) await client.auth.refreshSession();
+        router.push(promoted ? '/admin' : '/dashboard');
         router.refresh();
       } catch {
         onError('We could not complete sign-in. Please try again.');

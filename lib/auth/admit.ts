@@ -2,7 +2,7 @@ import type {User} from '@supabase/supabase-js';
 import type {createSupabaseServerClient} from '@/lib/supabase/server';
 
 type ServerClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
-export type Admission = {admitted: true} | {admitted: false; reason: 'approval_required' | 'lookup_failed'};
+export type Admission = {admitted: true; promoted: boolean} | {admitted: false; reason: 'approval_required' | 'lookup_failed'};
 
 /**
  * Decides whether a freshly authenticated Google account may enter the portal, and
@@ -11,7 +11,18 @@ export type Admission = {admitted: true} | {admitted: false; reason: 'approval_r
  * between them.
  */
 export async function admitLearner(supabase: ServerClient, user: User): Promise<Admission> {
+  let promoted = false;
+  // An invited admin has usually never applied as a learner, so the invite is
+  // claimed before the approval gate below can turn them away. claim_admin_invite
+  // promotes the caller alone, and only against an invite an existing admin created
+  // for the caller's own Google-verified address (migration 005). Before that
+  // migration runs the RPC simply errors, leaving the old behaviour intact.
   if (user.app_metadata?.role !== 'admin') {
+    const {data: claimed, error: claimError} = await supabase.rpc('claim_admin_invite');
+    if (claimError) console.error('[auth] admin invite claim failed for', user.email, claimError);
+    promoted = claimed === true;
+  }
+  if (!promoted && user.app_metadata?.role !== 'admin') {
     // Any approved application admits the learner, so take the most recent and
     // ignore the rest. maybeSingle() would null the result and raise PGRST116 on
     // more than one match, locking an approved learner out entirely.
@@ -30,5 +41,5 @@ export async function admitLearner(supabase: ServerClient, user: User): Promise<
     avatar_url: user.user_metadata?.avatar_url || null,
     updated_at: new Date().toISOString(),
   }, {onConflict: 'id'});
-  return {admitted: true};
+  return {admitted: true, promoted};
 }

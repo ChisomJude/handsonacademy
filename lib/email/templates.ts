@@ -149,6 +149,46 @@ export function eventRegistrationEmail(registration: {full_name: string; email: 
   };
 }
 
+/**
+ * Sent when an existing admin invites someone to the admin team. There is no token
+ * in this link: access is granted by signing in with Google on the invited address,
+ * so a forwarded copy of this email gets the recipient nowhere.
+ */
+export function adminInviteEmail(invite: {full_name: string; email: string}, invitedBy: string | null): EmailMessage {
+  const site = siteUrl();
+  const name = firstName(invite.full_name);
+  const loginUrl = `${site}/login`;
+  const from = invitedBy ? ` by ${escape(invitedBy)}` : '';
+  return {
+    to: invite.email,
+    subject: 'You have been added as a HandsOn Academy admin',
+    html: layout('Sign in with Google on this address to open the admin portal.', [
+      eyebrow('Admin access'),
+      heading('You are now an admin.'),
+      paragraph(`Hi ${name}, you have been added${from} to the HandsOn Academy admin team.`),
+      button(loginUrl, 'Open the admin portal'),
+      paragraph(`<strong style="color:${INK}">Sign in with the Google account on this email address</strong> (${escape(invite.email)}). Your access is tied to it, and signing in is what activates it — there is nothing else to accept.`),
+      paragraph(`<strong style="color:${INK}">What you can do:</strong> review learner submissions and applications, manage bootcamps and their participants, email registrants, and invite other admins.`),
+      paragraph('If you were not expecting this, you can ignore the email and tell us — access can be removed at any time.'),
+      paragraph(`If the button does not work, paste this into your browser: <a href="${loginUrl}" style="color:${BRAND}">${loginUrl}</a>`),
+    ].join('')),
+    text: `Hi ${invite.full_name.trim().split(/\s+/)[0] || 'there'},
+
+You have been added${invitedBy ? ` by ${invitedBy}` : ''} to the HandsOn Academy admin team.
+
+Open the admin portal: ${loginUrl}
+
+Sign in with the Google account on this email address (${invite.email}). Your access is tied to it, and signing in is what activates it — there is nothing else to accept.
+
+What you can do: review learner submissions and applications, manage bootcamps and their participants, email registrants, and invite other admins.
+
+If you were not expecting this, you can ignore the email and tell us — access can be removed at any time.
+
+HandsOn Academy
+${site}`,
+  };
+}
+
 /** A hand-written update sent by an administrator to opted-in community contacts. */
 export function announcementEmail(recipient: string, announcement: {title: string; body: string}): EmailMessage {
   const textBody = announcement.body.trim();

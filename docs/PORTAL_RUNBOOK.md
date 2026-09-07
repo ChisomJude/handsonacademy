@@ -32,7 +32,19 @@ Vercel builds from the same push, in parallel with this workflow, so a migration
 
 Migration 002 auto-closes duplicate live applications for the same email address before adding a unique index that prevents new ones; review `/admin/inquiries` afterwards if you expect duplicates.
 
-## One-time Supabase setup
+## Admin access
+
+Admins are added from **Admin → Admins** (`/admin/admins`): enter a name and email, and that person receives an invite email. They become an admin by signing in with Google on that address — Google is the verification, so there is no token to leak and nothing to run in the database. If they already have an account the role lands immediately; otherwise it is applied automatically at their first sign-in, even though they never applied as a learner.
+
+Removing access is on the same page. Two moves are refused: removing yourself, and removing the last remaining admin.
+
+A role change reaches an already-signed-in session at its next token refresh, within about an hour. Signing out and back in applies it at once.
+
+Under the hood (migration `005_admin_invites.sql`): `public.admin_invites` holds the invites, and security definer functions — `invite_admin`, `claim_admin_invite`, `revoke_admin`, `list_admins` — are the only things that write `auth.users`. Each re-checks its caller, so no service-role key enters the application.
+
+## Bootstrapping the first admin
+
+Only needed once per database, before anyone can use the page above.
 
 1. Set your own account as admin (replace the email):
 
@@ -42,7 +54,7 @@ set raw_app_meta_data = coalesce(raw_app_meta_data, '{}'::jsonb) || jsonb_build_
 where email = 'you@example.com';
 ```
 
-2. Sign out and sign back in so the refreshed JWT contains the admin role.
+2. Sign out and sign back in so the refreshed JWT contains the admin role. From then on, invite everyone else from **Admin → Admins**.
 
 ## Vercel variables
 

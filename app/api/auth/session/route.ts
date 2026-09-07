@@ -16,5 +16,8 @@ export async function POST() {
     await supabase.auth.signOut();
     return NextResponse.json({error: admission.reason}, {status: 403});
   }
-  return NextResponse.json({ok: true});
+  // `promoted` tells the browser it just claimed an admin invite. The session it is
+  // holding was minted before the role existed, so the client has to refresh it
+  // before any admin page will recognise the account.
+  return NextResponse.json({ok: true, promoted: admission.promoted});
 }
