@@ -32,6 +32,22 @@ Vercel builds from the same push, in parallel with this workflow, so a migration
 
 Migration 002 auto-closes duplicate live applications for the same email address before adding a unique index that prevents new ones; review `/admin/inquiries` afterwards if you expect duplicates.
 
+## Reviewing submissions
+
+**Review is feedback, not a gate.** A learner's progress is recorded the moment they submit evidence, so the next mission opens immediately and a submission sitting in the queue never holds anyone up. Approving is encouragement and a record — it does not unlock anything.
+
+`/admin/submissions` shows, for each submission: who sent it (name and email), which track and mission with its position in the sequence, how far that learner has got overall, their own 1-5 rating of the module, and the full thread of replies. Filter by state, search by learner, mission or track, ten to a page.
+
+Three actions, all of which write a message to the thread and a notification the learner sees at next sign-in:
+
+- **Approve** — marks it approved. With no note, the learner still gets a short congratulation.
+- **Request changes** — marks it for another look. Write what to change.
+- **Send message only** — a comment or a cheer that leaves the verdict alone.
+
+Learners see the same thread under the mission and can reply, so a question does not need email. Their unread count sits in the bell in the portal header.
+
+Rating, replies, and notifications need migration `006_submission_reviews.sql`. Until it runs, the queue falls back to its old shape and says so at the top.
+
 ## Admin access
 
 Admins are added from **Admin → Admins** (`/admin/admins`): enter a name and email, and that person receives an invite email. They become an admin by signing in with Google on that address — Google is the verification, so there is no token to leak and nothing to run in the database. If they already have an account the role lands immediately; otherwise it is applied automatically at their first sign-in, even though they never applied as a learner.

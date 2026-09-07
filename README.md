@@ -48,7 +48,8 @@ App Router pages are server-rendered; interactive pieces are small client island
 
 - **Course content is not editable from the admin UI.** Lesson bodies are static TypeScript, pre-rendered at build time; changing them requires a deploy. This is the main v2 item.
 - **Turnstile fails open.** With `TURNSTILE_SECRET_KEY` unset the bot check is skipped entirely and `/api/inquiries` has no rate limiting of its own. Set it in production.
-- Announcements exist in the database with no editor and no learner-facing display.
+- Announcements are sent by email from the admin console, with no learner-facing feed in the portal.
+- Learner notifications cover submission review only; nothing else writes to the bell yet.
 - Speakers share the `mentor` inquiry kind.
 - Payments are not implemented; every track and mission is free.
 - No automated test suite. CI covers database migrations only (`.github/workflows/database-migrations.yml`); the app itself deploys straight from Vercel's Git integration.

@@ -38,6 +38,8 @@ export async function admitLearner(supabase: ServerClient, user: User): Promise<
   await supabase.from('profiles').upsert({
     id: user.id,
     display_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Learner',
+    // Carried here so the review queue can name a learner without reading auth.users.
+    email: user.email,
     avatar_url: user.user_metadata?.avatar_url || null,
     updated_at: new Date().toISOString(),
   }, {onConflict: 'id'});
