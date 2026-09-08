@@ -158,7 +158,7 @@ export function SubmissionQueue({rows, limited}: {rows: QueueRow[]; limited: boo
     </div>
 
     {visible.length > PER_PAGE && <div style={{display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', marginTop: 18}}>
-      <span style={{fontSize: 13, color: 'var(--muted)'}}>Showing {(current - 1) * PER_PAGE + 1}–{Math.min(current * PER_PAGE, visible.length)} of {visible.length}</span>
+      <span style={{fontSize: 13, color: 'var(--muted)'}}>Showing {(current - 1) * PER_PAGE + 1}-{Math.min(current * PER_PAGE, visible.length)} of {visible.length}</span>
       <div style={{display: 'flex', gap: 8, alignItems: 'center'}}>
         <button className="btn btn-secondary" style={{fontSize: 12, padding: '9px 14px'}} onClick={() => setPage(current - 1)} disabled={current <= 1}>Previous</button>
         <span style={{fontSize: 13, fontWeight: 700}}>Page {current} of {pageCount}</span>

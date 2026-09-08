@@ -9,7 +9,7 @@ const stamp = (value: string) => new Date(value).toLocaleString('en', {day: 'num
 const STATUS: Record<Submission['status'], [string, string, string]> = {
   approved: ['Approved', '#e2f4e8', '#12706d'],
   needs_changes: ['Reviewer asked for changes', '#fdeee5', '#b9462b'],
-  pending: ['Waiting for review — carry on to the next mission', '#eef4f6', '#4f6f72'],
+  pending: ['Waiting for review. Carry on to the next mission', '#eef4f6', '#4f6f72'],
 };
 
 /**
@@ -57,7 +57,7 @@ export function SubmissionThread({missionId, refreshKey}: {missionId: string; re
   if (!loaded || submissions.length === 0) return null;
   return <section style={{marginTop: 28}}>
     <span className="eyebrow">Your submissions</span>
-    <p className="lede" style={{fontSize: 13, marginTop: 6}}>Every attempt at this mission, and what your reviewer said. Feedback never blocks you — the next mission is already open.</p>
+    <p className="lede" style={{fontSize: 13, marginTop: 6}}>Every attempt at this mission, and what your reviewer said. Feedback never blocks you. The next mission is already open.</p>
     <div style={{display: 'grid', gap: 12, marginTop: 14}}>
       {submissions.map(submission => {
         const [label, background, color] = STATUS[submission.status];

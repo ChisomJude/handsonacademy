@@ -84,7 +84,7 @@ export function InquiryTable({initial}: {initial: Inquiry[]}) {
       const parts = [`${body.updated} updated`];
       if (body.emailed) parts.push(`${body.emailed} emailed`);
       if (body.email_unconfigured) parts.push('email not configured, so nobody was notified');
-      if (body.email_failures) parts.push(`${body.email_failures} email(s) failed — repeat the action to retry`);
+      if (body.email_failures) parts.push(`${body.email_failures} email(s) failed, repeat the action to retry`);
       if (body.failed) parts.push(`${body.failed} failed`);
       setNotice(parts.join(' · '));
     } catch {
@@ -160,7 +160,7 @@ export function InquiryTable({initial}: {initial: Inquiry[]}) {
               <td style={{padding: '11px 10px'}}><input type="checkbox" checked={selected.has(row.id)} onChange={() => toggle(row.id)} aria-label={`Select ${row.full_name}`} /></td>
               <td style={{padding: '11px 10px', fontWeight: 700}}>{row.full_name}<br /><span style={{fontWeight: 400, color: 'var(--muted)'}}>{row.country}</span></td>
               <td style={{padding: '11px 10px'}}><a href={`mailto:${row.email}`} style={{color: 'var(--brand)'}}>{row.email}</a><br /><a href={`tel:${row.phone}`} style={{color: 'var(--muted)'}}><PhoneCall size={11} /> {row.phone}</a></td>
-              <td style={{padding: '11px 10px'}}>{row.organization || '—'}<br /><span style={{color: 'var(--muted)'}}>{row.focus || ''}</span></td>
+              <td style={{padding: '11px 10px'}}>{row.organization || '-'}<br /><span style={{color: 'var(--muted)'}}>{row.focus || ''}</span></td>
               <td style={{padding: '11px 10px'}}><span className="tag" style={{color: STATUS_COLOURS[row.status] || 'var(--brand)', borderColor: 'currentColor'}}>{row.status}</span>{row.decision_email_sent_at && <><br /><small style={{color: 'var(--muted)'}}>emailed</small></>}</td>
               <td style={{padding: '11px 10px', color: 'var(--muted)', whiteSpace: 'nowrap'}}>{new Date(row.created_at).toLocaleDateString()}</td>
               <td style={{padding: '11px 10px'}}><button aria-label={`Show details for ${row.full_name}`} onClick={() => setExpanded(expanded === row.id ? null : row.id)} style={{border: 0, background: 'none', cursor: 'pointer', color: 'var(--muted)'}}>{expanded === row.id ? <ChevronDown size={17} /> : <ChevronRight size={17} />}</button></td>

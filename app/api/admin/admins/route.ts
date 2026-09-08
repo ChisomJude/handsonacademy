@@ -4,7 +4,7 @@ import {sendEmail} from '@/lib/email/send';
 import {adminInviteEmail} from '@/lib/email/templates';
 
 /**
- * Admin team management. The privileged work — writing the role onto auth.users —
+ * Admin team management. The privileged work (writing the role onto auth.users)
  * happens inside the security definer functions from migration 005, which re-check
  * the caller themselves. This route is the ordinary admin gate plus input handling,
  * so a missing check here still cannot grant anybody anything.

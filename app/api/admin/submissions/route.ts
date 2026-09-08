@@ -5,7 +5,7 @@ import {missionContext} from '@/lib/submissions';
 /**
  * Reviewing a submission. Every path here ends the same way: a message on the thread
  * and a notification the learner sees at next sign-in, so feedback never dies inside
- * the admin console. Marking a submission reviewed does not touch mission_progress —
+ * the admin console. Marking a submission reviewed does not touch mission_progress:
  * review is feedback, not a gate on the next mission.
  */
 type Reviewed = {id?: string; status?: 'approved' | 'needs_changes'; reviewer_notes?: string; message?: string};
@@ -63,7 +63,7 @@ export async function PATCH(request: Request) {
   await notify(
     session.supabase, data, {id: session.user.id, name: reviewer},
     note || (approved
-      ? 'Nice work — this one is approved. Keep the momentum going.'
+      ? 'Nice work. This one is approved, keep the momentum going.'
       : 'Have another look at this one when you get a chance.'),
     approved ? `Approved: ${context.missionTitle}` : `Feedback on ${context.missionTitle}`,
   );

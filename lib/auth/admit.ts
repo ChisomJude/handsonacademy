@@ -6,8 +6,8 @@ export type Admission = {admitted: true; promoted: boolean} | {admitted: false; 
 
 /**
  * Decides whether a freshly authenticated Google account may enter the portal, and
- * records their profile if so. Shared by both sign-in paths — the Google Identity
- * Services token flow and the legacy OAuth redirect — so the gate cannot drift
+ * records their profile if so. Shared by both sign-in paths (the Google Identity
+ * Services token flow and the legacy OAuth redirect), so the gate cannot drift
  * between them.
  */
 export async function admitLearner(supabase: ServerClient, user: User): Promise<Admission> {

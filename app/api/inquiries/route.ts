@@ -11,14 +11,14 @@ export async function POST(request: Request) {
   const supabase = await createSupabaseServerClient();
   const inquiry = {kind: body.kind!, full_name: body.full_name!.trim(), email: body.email!.trim().toLowerCase(), phone: body.phone!.trim(), country: body.country?.trim() || null, organization: body.organization?.trim() || null, focus: body.focus?.trim() || null, message: body.message!.trim(), consent: true};
   // No .select() here on purpose. Chaining one makes PostgREST emit INSERT ...
-  // RETURNING, and RLS applies the SELECT policies to returned rows — neither of
+  // RETURNING, and RLS applies the SELECT policies to returned rows, neither of
   // which a public applicant can satisfy, so the insert fails with "new row violates
   // row-level security policy" even though the INSERT policy allows it. Nothing
   // downstream needs the generated id.
   const {error} = await supabase.from('community_inquiries').insert(inquiry);
   // 23505 is the partial unique index from migration 002: one live learner
   // application per email. Repeat submissions are answered, not recorded twice.
-  if (error?.code === '23505') return NextResponse.json({error: 'We already have an application from this email address. Watch your inbox — we reply to every applicant.'}, {status: 409});
+  if (error?.code === '23505') return NextResponse.json({error: 'We already have an application from this email address. Watch your inbox. We reply to every applicant.'}, {status: 409});
   if (error) return NextResponse.json({error: error.message}, {status: 500});
 
   // Applying sends no email to anyone, applicant or admin. The approval email is the

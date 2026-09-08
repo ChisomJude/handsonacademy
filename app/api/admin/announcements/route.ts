@@ -13,7 +13,7 @@ export async function POST(request: Request) {
   let payload: {title?: unknown; body?: unknown};
   try { payload = await request.json() as {title?: unknown; body?: unknown}; } catch { return NextResponse.json({error: 'Invalid request.'}, {status: 400}); }
   const title = value(payload.title, 2, 160), body = value(payload.body, 2, 10000);
-  if (!title || !body) return NextResponse.json({error: 'Use a subject between 2–160 characters and a message between 2–10,000 characters.'}, {status: 400});
+  if (!title || !body) return NextResponse.json({error: 'Use a subject between 2-160 characters and a message between 2-10,000 characters.'}, {status: 400});
 
   // Only contacts that explicitly consented to communication are eligible. Each
   // address is normalised and deduplicated across applications and event sign-ups.

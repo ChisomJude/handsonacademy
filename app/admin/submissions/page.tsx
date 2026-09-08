@@ -75,7 +75,7 @@ export default async function Submissions() {
     <Link href="/admin" style={{fontSize: 13, color: 'var(--muted)', display: 'inline-flex', gap: 7, alignItems: 'center'}}><ArrowLeft size={15} /> Admin overview</Link>
     <span className="eyebrow" style={{display: 'block', marginTop: 30}}>Review queue</span>
     <h1>Submissions</h1>
-    <p className="lede">{pending} waiting for review. Approving is encouragement, not a gate — learners move to the next mission as soon as they submit.</p>
+    <p className="lede">{pending} waiting for review. Approving is encouragement, not a gate. Learners move to the next mission as soon as they submit.</p>
     {limited && <div className="card" style={{padding: 18, marginTop: 20}}><p style={{margin: 0, fontWeight: 700, color: '#b9462b'}}>Migration 006 has not reached this database yet.</p><p className="lede" style={{fontSize: 14, margin: '6px 0 0'}}>Ratings, replies, and learner notifications stay hidden until the <b>Database migrations</b> workflow runs.</p></div>}
     <SubmissionQueue rows={queue} limited={limited} />
   </section>;

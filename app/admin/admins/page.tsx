@@ -24,7 +24,7 @@ export default async function Admins() {
     <Link href="/admin" style={{fontSize: 13, color: 'var(--muted)', display: 'inline-flex', gap: 7, alignItems: 'center'}}><ArrowLeft size={15} /> Admin overview</Link>
     <span className="eyebrow" style={{display: 'block', marginTop: 30}}>Access</span>
     <h1>Admin team</h1>
-    <p className="lede">Add someone by name and email. They become an admin by signing in with Google on that address — there is no password to share and nothing to run in the database.</p>
+    <p className="lede">Add someone by name and email. They become an admin by signing in with Google on that address. There is no password to share and nothing to run in the database.</p>
     {notReady
       ? <div className="card" style={{padding: 24, marginTop: 24}}><p role="alert" style={{color: '#b9462b', margin: 0, fontWeight: 700}}>Migration 005 has not reached this database yet.</p><p className="lede" style={{fontSize: 14, marginBottom: 0}}>Run the <b>Database migrations</b> workflow from the Actions tab, then reload this page.</p></div>
       : <AdminTeam

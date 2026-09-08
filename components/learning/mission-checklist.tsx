@@ -74,7 +74,7 @@ export function MissionChecklist({mission}: {mission: Mission | LessonMission}) 
         {saving ? <LoaderCircle className="spin" size={16} /> : <Send size={16} />} {saving ? 'Saving…' : !quizPassed ? 'Pass the knowledge check first' : 'Complete mission'}
       </button>
       {error && <p role="alert" style={{color: '#b9462b', fontSize: 13}}>{error}</p>}
-      {sent > 0 && <p role="status" style={{color: 'var(--brand)', fontSize: 13}}>Evidence submitted. The next mission is open now — your reviewer will reply here.</p>}
+      {sent > 0 && <p role="status" style={{color: 'var(--brand)', fontSize: 13}}>Evidence submitted. The next mission is open now. Your reviewer will reply here.</p>}
       <style>{`.spin{animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
 

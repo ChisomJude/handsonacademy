@@ -29,7 +29,7 @@ export async function GET(request: Request) {
 
 /**
  * Records mission evidence, plus the learner's own rating of the module. Submitting
- * never gates progression — mission_progress is written separately by the client the
+ * never gates progression: mission_progress is written separately by the client the
  * moment evidence lands, so a submission waiting for review does not hold anyone up.
  */
 export async function POST(request: Request) {

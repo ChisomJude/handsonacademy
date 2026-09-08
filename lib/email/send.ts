@@ -45,6 +45,20 @@ export async function sendEmail(message: EmailMessage): Promise<EmailResult> {
 }
 
 /** Canonical public origin, without a trailing slash, for links inside emails. */
+const CANONICAL_SITE = 'https://handsonacademy.org.ng';
+
+/**
+ * The address that goes into email. Preview and misconfigured deployments set
+ * NEXT_PUBLIC_SITE_URL to a *.vercel.app host, and a link like that in a learner's
+ * inbox is both off-brand and dead once the deployment rolls, so it is ignored in
+ * favour of the canonical domain.
+ */
 export function siteUrl(): string {
-  return (process.env.NEXT_PUBLIC_SITE_URL || 'https://handsonacademy.org.ng').replace(/\/+$/, '');
+  const configured = (process.env.NEXT_PUBLIC_SITE_URL || '').trim().replace(/\/+$/, '');
+  if (!configured) return CANONICAL_SITE;
+  try {
+    return /(^|\.)vercel\.app$/i.test(new URL(configured).hostname) ? CANONICAL_SITE : configured;
+  } catch {
+    return CANONICAL_SITE;
+  }
 }
