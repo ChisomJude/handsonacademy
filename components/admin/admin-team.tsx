@@ -27,7 +27,7 @@ export function AdminTeam({admins, pending, currentEmail}: {admins: AdminRow[]; 
       setNotice(body.promoted
         ? `${body.email} is an admin now. They may need to sign out and back in for it to take effect.`
         : `${body.email} is invited. They become an admin the moment they sign in with Google on that address.`
-        + (body.email_skipped ? ' No invite email was sent: email is not configured.' : ''));
+        + (body.email_skipped ? ' No invite email was sent: email is not configured.' : body.email_queued ? " The invite email is queued: today's sending limit is used up, it goes out after 00:15 UTC." : ''));
       form.reset();
       router.refresh();
     } catch (cause) {

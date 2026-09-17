@@ -50,7 +50,7 @@ export async function POST(request: Request) {
   const invitedBy = session.user.user_metadata?.full_name as string | undefined;
   const delivery = await sendEmail(adminInviteEmail({full_name, email}, invitedBy || session.user.email || null));
   const promoted = Boolean((data as {promoted?: boolean} | null)?.promoted);
-  return NextResponse.json({ok: true, email, full_name, promoted, emailed: delivery.sent, email_skipped: Boolean(delivery.skipped)});
+  return NextResponse.json({ok: true, email, full_name, promoted, emailed: delivery.sent, email_queued: Boolean(delivery.queued), email_skipped: Boolean(delivery.skipped)});
 }
 
 export async function DELETE(request: Request) {

@@ -83,6 +83,7 @@ export function InquiryTable({initial}: {initial: Inquiry[]}) {
       setNote('');
       const parts = [`${body.updated} updated`];
       if (body.emailed) parts.push(`${body.emailed} emailed`);
+      if (body.email_queued) parts.push(`${body.email_queued} email(s) queued: today's sending limit is used up, they go out after 00:15 UTC`);
       if (body.email_unconfigured) parts.push('email not configured, so nobody was notified');
       if (body.email_failures) parts.push(`${body.email_failures} email(s) failed, repeat the action to retry`);
       if (body.failed) parts.push(`${body.failed} failed`);

@@ -27,7 +27,7 @@ Open `http://localhost:3000`. Copy `.env.example` to `.env.local` and fill in wh
 
 Copy `.env.example` to `.env.local`, and set the same variables in Vercel for Preview and Production. [docs/PORTAL_RUNBOOK.md](./docs/PORTAL_RUNBOOK.md) is the operational source of truth: Supabase migrations, granting admin, Resend domain verification, Google consent-screen branding, the go-live checklist, and the smoke test.
 
-Two things bite quietly if wrong: `EMAIL_FROM` must be on the Resend-verified domain, and `NEXT_PUBLIC_SITE_URL` builds every link inside every email.
+Two things bite quietly if wrong: `EMAIL_FROM` must be on the Resend-verified domain, and `NEXT_PUBLIC_SITE_URL` builds every link inside every email. Email is held to Resend's free-tier limit (100 a day): bulk announcements send up to 90 in one batch and queue the rest for a daily cron (`vercel.json`), which needs `SUPABASE_SERVICE_ROLE_KEY` and `CRON_SECRET` set.
 
 ## Applicant journey
 

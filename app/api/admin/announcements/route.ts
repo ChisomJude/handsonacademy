@@ -1,7 +1,11 @@
 import {NextResponse} from 'next/server';
 import {createSupabaseServerClient} from '@/lib/supabase/server';
-import {sendEmail} from '@/lib/email/send';
+import {sendBulk} from '@/lib/email/send';
 import {announcementEmail} from '@/lib/email/templates';
+
+// A day's worth of bulk mail is one batch request, but the fallback path (a
+// rejected batch retried one address at a time) needs longer than the default.
+export const maxDuration = 60;
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 function value(input: unknown, min: number, max: number) { return typeof input === 'string' && input.trim().length >= min && input.trim().length <= max ? input.trim() : null; }
@@ -27,10 +31,11 @@ export async function POST(request: Request) {
   const {data: announcement, error: insertError} = await supabase.from('announcements').insert({title, body, published: true, created_by: user.id}).select('id').single();
   if (insertError || !announcement) return NextResponse.json({error: insertError?.message || 'Could not save the announcement.'}, {status: 500});
 
-  let sent = 0, failed = 0, skipped = 0;
-  // Deliberately sequential: this protects the provider rate limit and ensures a
-  // delivery failure for one address never prevents the rest from receiving it.
-  for (const recipient of recipients) { const result = await sendEmail(announcementEmail(recipient, {title, body})); if (result.sent) sent++; else if (result.skipped) skipped++; else failed++; }
-  await supabase.from('announcements').update({email_sent_at: sent ? new Date().toISOString() : null, email_recipient_count: sent, email_failure_count: failed}).eq('id', announcement.id);
-  return NextResponse.json({recipients: recipients.length, sent, failed, skipped, announcement_id: announcement.id});
+  // Every recipient is queued, then as many as today's bulk budget allows go out
+  // now in one batch request. The rest are delivered by the daily cron once the
+  // provider quota resets, so nobody is dropped and no send exceeds the limit.
+  const outcome = await sendBulk(recipients.map(recipient => announcementEmail(recipient, {title, body})), 'announcement', {announcementId: announcement.id});
+  // The outbox keeps these counters current as the cron sends the rest (migration 007).
+  await supabase.from('announcements').update({email_sent_at: outcome.sent ? new Date().toISOString() : null, email_recipient_count: outcome.sent, email_failure_count: outcome.failed, email_queued_count: outcome.queued}).eq('id', announcement.id);
+  return NextResponse.json({...outcome, announcement_id: announcement.id});
 }

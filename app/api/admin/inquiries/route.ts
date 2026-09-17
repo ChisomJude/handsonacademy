@@ -4,13 +4,14 @@ import {sendEmail} from '@/lib/email/send';
 import {applicationApprovedEmail, applicationDeclinedEmail} from '@/lib/email/templates';
 
 type Status = 'approved'|'rejected'|'blocked'|'contacted'|'closed';
-type EmailStatus = 'sent'|'already_sent'|'failed'|'not_configured'|null;
+type EmailStatus = 'sent'|'queued'|'already_sent'|'failed'|'not_configured'|null;
 type Outcome = {id: string; ok: boolean; status?: Status; email_status?: EmailStatus; error?: string};
 
 /**
  * Applies a decision to one inquiry and, for learner approvals and rejections,
- * emails the applicant. decision_email_sent_at is stamped only after a successful
- * send, so a repeat click never double-sends but a failed send can be retried.
+ * emails the applicant. decision_email_sent_at is stamped once the email is sent
+ * or safely queued in the outbox (which then owns delivery and retries), so a
+ * repeat click never double-sends but a hard failure can be retried.
  */
 async function decide(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>, id: string, status: Status, adminNotes?: string): Promise<Outcome> {
   const patch: Record<string, unknown> = {status, status_updated_at: new Date().toISOString()};
@@ -22,8 +23,8 @@ async function decide(supabase: Awaited<ReturnType<typeof createSupabaseServerCl
   const decidable = data.kind === 'learner' && (status === 'approved' || status === 'rejected');
   if (decidable && !data.decision_email_sent_at) {
     const result = await sendEmail(status === 'approved' ? applicationApprovedEmail(data) : applicationDeclinedEmail(data));
-    emailStatus = result.sent ? 'sent' : result.skipped ? 'not_configured' : 'failed';
-    if (result.sent) await supabase.from('community_inquiries').update({decision_email_sent_at: new Date().toISOString()}).eq('id', id);
+    emailStatus = result.sent ? 'sent' : result.queued ? 'queued' : result.skipped ? 'not_configured' : 'failed';
+    if (result.sent || result.queued) await supabase.from('community_inquiries').update({decision_email_sent_at: new Date().toISOString()}).eq('id', id);
   } else if (decidable) {
     emailStatus = 'already_sent';
   }
@@ -50,6 +51,7 @@ export async function PATCH(request: Request) {
     updated: results.length - failed.length,
     failed: failed.length,
     emailed: results.filter(result => result.email_status === 'sent').length,
+    email_queued: results.filter(result => result.email_status === 'queued').length,
     email_failures: results.filter(result => result.email_status === 'failed').length,
     email_unconfigured: results.some(result => result.email_status === 'not_configured'),
   });
